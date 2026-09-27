@@ -1,0 +1,2121 @@
+﻿import { store } from '../store.js';
+
+export function renderLanding() {
+  const state = store.getState();
+  const activeSearchTab = window.landingSearchTab || 'flights';
+  const flightTripType = window.landingFlightTripType || 'roundtrip';
+  const specialFare = window.landingSpecialFare || 'regular';
+  const isFlexibleDates = typeof window.landingFlexibleDates === 'undefined' ? true : window.landingFlexibleDates;
+  const isDirectOnly = !!window.landingDirectOnly;
+  const isSearchActive = !!window.landingIsSearchActive;
+  const isTravellerDropdownOpen = !!window.isTravellerDropdownOpen;
+
+  const adults = typeof window.landingAdults === 'number' ? window.landingAdults : 1;
+  const children = typeof window.landingChildren === 'number' ? window.landingChildren : 0;
+  const infants = typeof window.landingInfants === 'number' ? window.landingInfants : 0;
+  const cabinClass = window.landingCabinClass || 'Economy';
+  const totalTravellers = adults + children + infants;
+
+  const fromCity = window.landingFromCity || 'New Delhi (DEL)';
+  const toCity = window.landingToCity || 'Goa (GOI / GOX)';
+  const fromCode = fromCity.match(/\(([A-Z]{3})/)?.[1] || 'DEL';
+  const toCode = toCity.match(/\(([A-Z]{3})/)?.[1] || 'GOI';
+
+  // Bank & Promo Coupons (Yatra Signature)
+  const promoOffers = [
+    {
+      code: 'TRAVICICI',
+      bank: 'ICICI Bank',
+      title: 'ICICI Bank Credit Cards',
+      discount: 'Flat 12% OFF up to ₹2,500',
+      desc: 'Applicable on domestic flights & luxury hotel stays. No minimum booking value required.',
+      category: 'flights',
+      icon: 'credit-card',
+      color: 'from-amber-600 to-orange-700'
+    },
+    {
+      code: 'TRAVHDFC',
+      bank: 'HDFC Bank',
+      title: 'HDFC Super Saver',
+      discount: 'Instant ₹4,000 Cashback',
+      desc: 'Exclusive savings on multi-airline combinations, roundtrips, and 5-star verified stays.',
+      category: 'hotels',
+      icon: 'sparkles',
+      color: 'from-blue-600 to-indigo-800'
+    },
+    {
+      code: 'FIRSTFLY',
+      bank: 'TRAVORA Exclusive',
+      title: 'First Flight Special',
+      discount: 'Flat ₹1,200 Instant Discount',
+      desc: 'Valid on your first domestic booking. Includes free seat selection and complimentary meal.',
+      category: 'flights',
+      icon: 'plane',
+      color: 'from-[#ea2330] to-[#880808]'
+    },
+    {
+      code: 'PRIMEFLY',
+      bank: 'TRAVORA Prime',
+      title: 'Zero Convenience Fee',
+      discount: 'Save ₹400 - ₹850 per Ticket',
+      desc: 'Never pay booking fees or convenience charges again with TRAVORA Prime Membership.',
+      category: 'prime',
+      icon: 'crown',
+      color: 'from-purple-600 to-pink-700'
+    },
+    {
+      code: 'HACKERDEAL',
+      bank: 'Combo Savings',
+      title: 'Kayak Hacker Fares',
+      discount: 'Save up to 35% on Split Fares',
+      desc: 'Mix and match separate airlines for departure and return to unlock lowest wholesale rates.',
+      category: 'flights',
+      icon: 'zap',
+      color: 'from-[#ea2330] to-[#5c0606]'
+    },
+    {
+      code: 'MONSOON26',
+      bank: 'Special Holiday',
+      title: 'Monsoon Getaways',
+      discount: 'Flat ₹2,500 OFF on Tours',
+      desc: 'Valid on all 4D/3N and 5D/4N holiday packages in Goa, Kerala, and Himachal Pradesh.',
+      category: 'holidays',
+      icon: 'palmtree',
+      color: 'from-[#880808] to-[#260406]'
+    }
+  ];
+
+  // Top 8 Visual Indian Dream Destinations (Image Rich Showcase)
+  const topDestinations = [
+    {
+      name: 'Goa',
+      tagline: 'Sun-Kissed Beaches & Golden Sunsets',
+      cityFull: 'Goa (GOI / GOX)',
+      fare: 2499,
+      hotelsCount: '1,420+ Stays',
+      weather: '28°C Sunny',
+      weatherIcon: 'sun',
+      tag: 'Bestseller Beach',
+      img: '/static/assets/destinations/goa_beach_sunset.jpg'
+    },
+    {
+      name: 'Kashmir',
+      tagline: 'Gulmarg Snow Slopes & Dal Lake Shikaras',
+      cityFull: 'Srinagar (SXR)',
+      fare: 4990,
+      hotelsCount: '680+ Stays',
+      weather: '-1°C Snowing',
+      weatherIcon: 'cloud-snow',
+      tag: 'Winter Alpine Special',
+      img: '/static/assets/destinations/kashmir_snow_resort.jpg'
+    },
+    {
+      name: 'Kerala',
+      tagline: 'Alleppey Luxury Houseboats & Backwaters',
+      cityFull: 'Kochi (COK)',
+      fare: 4650,
+      hotelsCount: '980+ Stays',
+      weather: '26°C Tropical',
+      weatherIcon: 'cloud-rain',
+      tag: 'Ayurveda & Lagoons',
+      img: '/static/assets/destinations/kerala_houseboat_lake.jpg'
+    },
+    {
+      name: 'Jaipur',
+      tagline: 'Majestic Amber Fort & Royal Courtyards',
+      cityFull: 'Jaipur (JAI)',
+      fare: 3200,
+      hotelsCount: '1,150+ Stays',
+      weather: '24°C Pleasant',
+      weatherIcon: 'sun',
+      tag: 'Royal Heritage',
+      img: '/static/assets/destinations/jaipur_royal_palace.jpg'
+    },
+    {
+      name: 'Manali',
+      tagline: 'Snow Capped Cedar Pines & Solang Valley',
+      cityFull: 'Kullu Manali (KUU)',
+      fare: 2850,
+      hotelsCount: '740+ Stays',
+      weather: '4°C Crisp Air',
+      weatherIcon: 'cloud',
+      tag: 'Himalayan Escape',
+      img: '/static/assets/destinations/manali_snow_peaks.jpg'
+    },
+    {
+      name: 'Andaman & Havelock',
+      tagline: 'Radhanagar Crystal Azure Waters & Palms',
+      cityFull: 'Port Blair (IXZ)',
+      fare: 6800,
+      hotelsCount: '320+ Stays',
+      weather: '29°C Turquoise',
+      weatherIcon: 'sun',
+      tag: 'Island Paradise',
+      img: '/static/assets/destinations/andaman_havelock_beach.jpg'
+    },
+    {
+      name: 'Udaipur',
+      tagline: 'Lake Pichola Floating Marble Palaces',
+      cityFull: 'Udaipur (UDR)',
+      fare: 3600,
+      hotelsCount: '580+ Stays',
+      weather: '25°C Romantic',
+      weatherIcon: 'sunset',
+      tag: 'City of Lakes',
+      img: '/static/assets/destinations/udaipur_lake_palace.jpg'
+    },
+    {
+      name: 'Varanasi',
+      tagline: 'Ancient Ganga Ghats & Evening Lamp Aarti',
+      cityFull: 'Varanasi (VNS)',
+      fare: 3150,
+      hotelsCount: '620+ Stays',
+      weather: '23°C Spiritual',
+      weatherIcon: 'flame',
+      tag: 'Sacred Heritage',
+      img: '/static/assets/destinations/varanasi_ganga_ghats.jpg'
+    }
+  ];
+
+  // Explore India by Themes (8 Visual Tiles)
+  const travelThemes = [
+    { title: 'Beaches & Coastal Chill', count: '45+ Packages', img: '/static/assets/destinations/goa_beach_sunset.jpg', dest: 'Goa' },
+    { title: 'Snow & Himalayan Peaks', count: '38+ Packages', img: '/static/assets/destinations/manali_snow_peaks.jpg', dest: 'Manali' },
+    { title: 'Royal Palaces & Haveli', count: '29+ Packages', img: '/static/assets/destinations/jaipur_royal_palace.jpg', dest: 'Jaipur' },
+    { title: 'Backwaters & Houseboats', count: '24+ Packages', img: '/static/assets/destinations/kerala_houseboat_lake.jpg', dest: 'Kerala' },
+    { title: 'Spiritual Ghats & Temples', count: '32+ Packages', img: '/static/assets/destinations/varanasi_ganga_ghats.jpg', dest: 'Varanasi' },
+    { title: 'Island Coral Reefs', count: '18+ Packages', img: '/static/assets/destinations/andaman_havelock_beach.jpg', dest: 'Port Blair' },
+    { title: 'Romantic Floating Palaces', count: '22+ Packages', img: '/static/assets/destinations/udaipur_lake_palace.jpg', dest: 'Udaipur' },
+    { title: 'Winter Gondola Escapes', count: '27+ Packages', img: '/static/assets/destinations/kashmir_snow_resort.jpg', dest: 'Kashmir' }
+  ];
+
+  // Popular Flight Routes
+  const popularRoutes = [
+    { from: 'New Delhi (DEL)', to: 'Goa (GOI / GOX)', fromName: 'New Delhi', toName: 'Goa', fromCode: 'DEL', toCode: 'GOI', fare: 3499, airline: 'IndiGo', stops: 'Non-stop', duration: '2h 15m', tag: 'Bestseller' },
+    { from: 'Mumbai (BOM)', to: 'New Delhi (DEL)', fromName: 'Mumbai', toName: 'New Delhi', fromCode: 'BOM', toCode: 'DEL', fare: 3850, airline: 'Air India', stops: 'Non-stop', duration: '2h 10m', tag: 'Fastest' },
+    { from: 'Bengaluru (BLR)', to: 'Goa (GOI / GOX)', fromName: 'Bangalore', toName: 'Goa', fromCode: 'BLR', toCode: 'GOI', fare: 2499, airline: 'Akasa Air', stops: 'Non-stop', duration: '1h 15m', tag: 'Lowest Fare' },
+    { from: 'New Delhi (DEL)', to: 'Srinagar (SXR)', fromName: 'New Delhi', toName: 'Srinagar', fromCode: 'DEL', toCode: 'SXR', fare: 4990, airline: 'Vistara', stops: 'Non-stop', duration: '1h 35m', tag: 'Himalayan Deal' },
+    { from: 'Mumbai (BOM)', to: 'Jaipur (JAI)', fromName: 'Mumbai', toName: 'Jaipur', fromCode: 'BOM', toCode: 'JAI', fare: 3200, airline: 'SpiceJet', stops: 'Non-stop', duration: '1h 45m', tag: 'Royal Route' },
+    { from: 'Kolkata (CCU)', to: 'Port Blair (IXZ)', fromName: 'Kolkata', toName: 'Port Blair', fromCode: 'CCU', toCode: 'IXZ', fare: 6800, airline: 'IndiGo', stops: 'Non-stop', duration: '2h 30m', tag: 'Island Special' },
+    { from: 'New Delhi (DEL)', to: 'Kochi (COK)', fromName: 'New Delhi', toName: 'Kochi', fromCode: 'DEL', toCode: 'COK', fare: 4650, airline: 'Air India', stops: 'Non-stop', duration: '3h 10m', tag: 'Kerala Backwaters' },
+    { from: 'Hyderabad (HYD)', to: 'Goa (GOI / GOX)', fromName: 'Hyderabad', toName: 'Goa', fromCode: 'HYD', toCode: 'GOI', fare: 2890, airline: 'Akasa Air', stops: 'Non-stop', duration: '1h 20m', tag: 'Weekend Escape' }
+  ];
+
+  // Live Flights Search Results
+  const liveFlightResults = [
+    {
+      id: 'flight-1',
+      airline: 'IndiGo',
+      code: '6E-2041',
+      airlineLogo: '6E',
+      color: 'bg-indigo-600',
+      depTime: '06:15',
+      arrTime: '08:30',
+      duration: '2h 15m',
+      stops: 'Non-stop',
+      fromCode: fromCode,
+      toCode: toCode,
+      price: 3499,
+      originalPrice: 4350,
+      discount: 'Save ₹851',
+      badge: 'Cheapest Flight',
+      badgeColor: 'bg-emerald-500 text-white',
+      baggage: 'Cabin: 7kg | Check-in: 15kg',
+      refundable: 'Partially Refundable',
+      amenities: ['USB Power', 'Standard Legroom', 'On-time Guarantee']
+    },
+    {
+      id: 'flight-2',
+      airline: 'Akasa Air',
+      code: 'QP-1302',
+      airlineLogo: 'QP',
+      color: 'bg-orange-600',
+      depTime: '08:45',
+      arrTime: '11:05',
+      duration: '2h 20m',
+      stops: 'Non-stop',
+      fromCode: fromCode,
+      toCode: toCode,
+      price: 3720,
+      originalPrice: 4450,
+      discount: 'Save ₹730',
+      badge: 'New Boeing 737 MAX',
+      badgeColor: 'bg-blue-600 text-white',
+      baggage: 'Cabin: 7kg | Check-in: 15kg',
+      refundable: 'Free Reschedule with Prime',
+      amenities: ['Extra Legroom Option', 'Quiet Cabin', 'USB Ports']
+    },
+    {
+      id: 'flight-3',
+      airline: 'Air India',
+      code: 'AI-883',
+      airlineLogo: 'AI',
+      color: 'bg-red-700',
+      depTime: '10:30',
+      arrTime: '12:40',
+      duration: '2h 10m',
+      stops: 'Non-stop',
+      fromCode: fromCode,
+      toCode: toCode,
+      price: 4290,
+      originalPrice: 5100,
+      discount: 'Save ₹810',
+      badge: 'Free Hot Meal Included',
+      badgeColor: 'bg-amber-600 text-white',
+      baggage: 'Cabin: 7kg | Check-in: 25kg (Generous)',
+      refundable: 'Refundable',
+      amenities: ['Complimentary Hot Meals', '25kg Free Baggage', 'Wide Seats']
+    },
+    {
+      id: 'flight-4',
+      airline: 'Vistara',
+      code: 'UK-819',
+      airlineLogo: 'UK',
+      color: 'bg-purple-900',
+      depTime: '14:15',
+      arrTime: '16:30',
+      duration: '2h 15m',
+      stops: 'Non-stop',
+      fromCode: fromCode,
+      toCode: toCode,
+      price: 4850,
+      originalPrice: 5750,
+      discount: 'Save ₹900',
+      badge: 'Full Service Luxury',
+      badgeColor: 'bg-purple-700 text-white',
+      baggage: 'Cabin: 7kg | Check-in: 15kg',
+      refundable: 'Refundable',
+      amenities: ['Gourmet Dining', 'Vistara World Wireless IFE', 'Star Alliance Lounge Access']
+    },
+    {
+      id: 'flight-5',
+      airline: 'SpiceJet',
+      code: 'SG-291',
+      airlineLogo: 'SG',
+      color: 'bg-red-500',
+      depTime: '17:00',
+      arrTime: '21:10',
+      duration: '4h 10m',
+      stops: '1 Stop (via JAI 50m)',
+      fromCode: fromCode,
+      toCode: toCode,
+      price: 3250,
+      originalPrice: 4100,
+      discount: 'Save ₹850',
+      badge: 'Hacker Fare Stopover',
+      badgeColor: 'bg-slate-800 text-white',
+      baggage: 'Cabin: 7kg | Check-in: 15kg',
+      refundable: 'Partially Refundable',
+      amenities: ['SpiceMax Available', 'Low Layover']
+    }
+  ];
+
+  // 8 Luxury & Boutique Hotels Showcase (Image Rich)
+  const luxuryHotels = [
+    {
+      name: 'Taj Exotica Resort & Spa',
+      location: 'Benaulim, South Goa',
+      rating: '4.9',
+      reviews: '2,420 Reviews',
+      price: '14,500',
+      tag: '5-Star Beachfront Luxury',
+      img: '/static/assets/destinations/goa_beach_sunset.jpg',
+      amenities: ['Private Beach', 'Infinity Pool', 'Ayurvedic Spa', 'Free Breakfast Included']
+    },
+    {
+      name: 'Rambagh Palace Heritage',
+      location: 'Bhawani Singh Road, Jaipur',
+      rating: '5.0',
+      reviews: '3,110 Reviews',
+      price: '28,000',
+      tag: 'Royal Palace Residence',
+      img: '/static/assets/destinations/jaipur_royal_palace.jpg',
+      amenities: ['Royal Butler Service', 'Peacock Gardens', 'Historic Suites', 'Fine Dining']
+    },
+    {
+      name: 'Kumarakom Lake Resort',
+      location: 'Kottayam, Kerala Backwaters',
+      rating: '4.9',
+      reviews: '1,890 Reviews',
+      price: '16,200',
+      tag: 'Meandering Pool Villas',
+      img: '/static/assets/destinations/kerala_houseboat_lake.jpg',
+      amenities: ['Private Houseboat Cruise', 'Ayurveda Center', 'Lake View Dining', 'Speedboat Transfer']
+    },
+    {
+      name: 'The Khyber Himalayan Resort',
+      location: 'Gulmarg, Kashmir',
+      rating: '4.9',
+      reviews: '1,750 Reviews',
+      price: '22,500',
+      tag: 'Heated Glass Pool & Gondola',
+      img: '/static/assets/destinations/kashmir_snow_resort.jpg',
+      amenities: ['Ski-in / Ski-out', 'Heated Indoor Pool', 'L’Occitane Spa', 'Mountain View Balcony']
+    },
+    {
+      name: 'Taj Lake Palace',
+      location: 'Lake Pichola, Udaipur',
+      rating: '5.0',
+      reviews: '4,280 Reviews',
+      price: '34,000',
+      tag: 'Floating Marble Wonder',
+      img: '/static/assets/destinations/udaipur_lake_palace.jpg',
+      amenities: ['Royal Boat Arrival', 'Jiva Spa Boat', 'Champagne Sunset Cruise', 'Mewar Fine Dining']
+    },
+    {
+      name: 'The Oberoi Amarvilas',
+      location: 'Taj East Gate Road, Agra',
+      rating: '4.9',
+      reviews: '2,980 Reviews',
+      price: '31,500',
+      tag: 'Direct Taj Mahal Balcony View',
+      img: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=800&q=80',
+      amenities: ['Private Balcony Taj View', 'Tiered Turquoise Pools', 'Golf Cart Taj Access', 'Butler Service']
+    },
+    {
+      name: 'Taj Exotica Resort & Spa, Andamans',
+      location: 'Radhanagar Beach, Havelock',
+      rating: '4.9',
+      reviews: '1,430 Reviews',
+      price: '24,000',
+      tag: 'Pristine Island Sanctuary',
+      img: '/static/assets/destinations/andaman_havelock_beach.jpg',
+      amenities: ['Zero Footprint Villas', 'Private Radhanagar Shore', 'Scuba Diving Desk', 'Fresh Seafood']
+    },
+    {
+      name: 'Span Resort & Spa',
+      location: 'Baragarh, Manali Valley',
+      rating: '4.8',
+      reviews: '1,620 Reviews',
+      price: '15,800',
+      tag: 'Riverside Alpine Retreat',
+      img: '/static/assets/destinations/manali_snow_peaks.jpg',
+      amenities: ['Beas River Frontage', 'Cedar Forest Trails', 'Heli-Skiing Desk', 'Outdoor Bonfire Lounge']
+    }
+  ];
+
+  // Handcrafted Holiday Packages (6 Curated Itineraries with Photos)
+  const holidayPackages = [
+    {
+      id: 'goa-pkg',
+      name: 'Goa Sun, Sand & Spice Tour',
+      dest: 'Goa',
+      duration: '4 Days / 3 Nights',
+      price: 11499,
+      rating: '4.9/5',
+      operator: 'Goa Coastal Expeditions',
+      img: '/static/assets/destinations/goa_beach_sunset.jpg',
+      tag: 'Bestseller Beach',
+      inclusions: ['Round-trip Flights Included', '4-Star Beach Resort', 'South Goa Catamaran Tour', 'Daily Breakfast', 'AC Cab Transfer']
+    },
+    {
+      id: 'kashmir-pkg',
+      name: 'Kashmir Valley & Gulmarg Snow Escape',
+      dest: 'Kashmir',
+      duration: '5 Days / 4 Nights',
+      price: 18990,
+      rating: '5.0/5',
+      operator: 'Himalayan Peak Safaris',
+      img: '/static/assets/destinations/kashmir_snow_resort.jpg',
+      tag: 'Snow & Houseboat',
+      inclusions: ['Dal Lake Luxury Houseboat', 'Gondola Ride Phase 1', 'Mughal Gardens Tour', 'All Meals Included', 'Chauffeur Cab']
+    },
+    {
+      id: 'kerala-pkg',
+      name: 'Alleppey Backwaters & Munnar Hills',
+      dest: 'Kerala',
+      duration: '5 Days / 4 Nights',
+      price: 15400,
+      rating: '4.8/5',
+      operator: 'Backwater Trails Kerala',
+      img: '/static/assets/destinations/kerala_houseboat_lake.jpg',
+      tag: 'Ayurveda & Nature',
+      inclusions: ['Private Houseboat Stay', 'Tea Plantation Walk', 'Spice Gardens Excursion', 'Ayurvedic Massage', 'Airport Pickup']
+    },
+    {
+      id: 'rajasthan-pkg',
+      name: 'Royal Rajasthan Heritage & Palaces',
+      dest: 'Jaipur & Udaipur',
+      duration: '6 Days / 5 Nights',
+      price: 19800,
+      rating: '4.9/5',
+      operator: 'Rajputana Heritage Tours',
+      img: '/static/assets/destinations/jaipur_royal_palace.jpg',
+      tag: 'Palace Experience',
+      inclusions: ['Heritage Haveli Stays', 'Amber Fort Guided Visit', 'Lake Pichola Boat Ride', 'Cultural Puppet & Dance Shows']
+    },
+    {
+      id: 'andaman-pkg',
+      name: 'Andaman Azure Seas & Havelock Island',
+      dest: 'Port Blair & Havelock',
+      duration: '5 Days / 4 Nights',
+      price: 21900,
+      rating: '4.9/5',
+      operator: 'Bay of Bengal Escapes',
+      img: '/static/assets/destinations/andaman_havelock_beach.jpg',
+      tag: 'Island Coral Special',
+      inclusions: ['Speed Catamaran to Havelock', 'Snorkeling at Elephant Beach', 'Radhanagar Sunset Transfer', '4-Star Beach Cottages']
+    },
+    {
+      id: 'himachal-pkg',
+      name: 'Manali Pine Forest & Solang Adventure',
+      dest: 'Manali',
+      duration: '5 Days / 4 Nights',
+      price: 13900,
+      rating: '4.8/5',
+      operator: 'Beas Valley Adventure Co.',
+      img: '/static/assets/destinations/manali_snow_peaks.jpg',
+      tag: 'Mountain Adventure',
+      inclusions: ['Solang Valley Snow Activities', 'Atal Tunnel Excursion', 'Wooden Chalet Resort', 'Campfire & BBQ Dinner', 'Volvo Transfers']
+    }
+  ];
+
+  // Traveler Community Stories & UGC Photo Wall (6 Real Moments)
+  const travelerStories = [
+    {
+      name: 'Ananya Sharma',
+      trip: 'Vagator & Morjim, Goa',
+      rating: 5,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      img: '/static/assets/destinations/goa_beach_sunset.jpg',
+      badge: 'Solo Explorer',
+      quote: 'Booking through TRAVORA was effortless. Autonomous re-routing saved us 6 hours when our connecting flight got rescheduled without a single call needed!'
+    },
+    {
+      name: 'Rohan & Sneha Mathur',
+      trip: 'Gulmarg & Dal Lake, Kashmir',
+      rating: 5,
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+      img: '/static/assets/destinations/kashmir_snow_resort.jpg',
+      badge: 'Couples Getaway',
+      quote: 'The snow resort package had everything taken care of—gondola Phase 2 tickets, heated 4x4 cab, and the luxury Dal Lake houseboat was unreal.'
+    },
+    {
+      name: 'Vikramaditya Rao',
+      trip: 'Kumarakom & Alleppey, Kerala',
+      rating: 5,
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+      img: '/static/assets/destinations/kerala_houseboat_lake.jpg',
+      badge: 'Family Vacation',
+      quote: 'Private houseboat backwater cruise was pure tranquility. Traditional fish curry cooked fresh on board. Zero hidden fees at final checkout.'
+    },
+    {
+      name: 'Meera Deshmukh',
+      trip: 'Lake Pichola & City Palace, Udaipur',
+      rating: 5,
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
+      img: '/static/assets/destinations/udaipur_lake_palace.jpg',
+      badge: 'Heritage Lover',
+      quote: 'Watching the sunset over Lake Pichola from the palace courtyard was pure magic. The AI Planner configured our whole 4-day itinerary flawlessly.'
+    },
+    {
+      name: 'Arjun & Friends',
+      trip: 'Solang Valley & Rohtang, Manali',
+      rating: 5,
+      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80',
+      img: '/static/assets/destinations/manali_snow_peaks.jpg',
+      badge: 'Adventure Group',
+      quote: 'Flawless road transfer and alpine cottage booking. We booked the hacker flight combo and saved over ₹4,200 compared to other travel portals.'
+    },
+    {
+      name: 'Sanya & Kabir',
+      trip: 'Radhanagar Beach, Havelock',
+      rating: 5,
+      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
+      img: '/static/assets/destinations/andaman_havelock_beach.jpg',
+      badge: 'Honeymooners',
+      quote: 'Crystal clear waters at Radhanagar Beach. The verified operator catamaran and scuba gear arrived on time. Best holiday experience of our lives!'
+    }
+  ];
+
+  const showLandingSplash = !window.__travoraIntroPlayed;
+  if (showLandingSplash) {
+    setTimeout(() => { if (typeof window.dismissSplashIntro === 'function') window.dismissSplashIntro(); }, 2200);
+  }
+
+  return `
+    <!-- CINEMATIC LANDING SPLASH INTRO -->
+    ${showLandingSplash ? }`
+    <div id="auth-splash-overlay" onclick="window.dismissSplashIntro()" class="cursor-pointer select-none" style="z-index:9999;">
+      <div class="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none"></div>
+      <!-- Pulsing orbs -->
+      <div class="absolute top-1/4 left-1/4 w-80 h-80 rounded-full pointer-events-none animate-pulse" style="background:radial-gradient(circle,rgba(129,11,56,0.35),transparent 70%);filter:blur(40px);"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full pointer-events-none" style="background:radial-gradient(circle,rgba(220,195,170,0.18),transparent 70%);filter:blur(50px);animation:orbitPulse 3s ease-in-out infinite 0.8s;"></div>
+      <!-- Orbit rings -->
+      <div class="splash-orbit-ring"></div>
+      <div class="splash-orbit-ring"></div>
+      <div class="splash-orbit-ring"></div>
+      <!-- Content -->
+      <div class="relative flex flex-col items-center text-center space-y-6 z-10 px-6 max-w-lg mx-auto">
+        <!-- Plane arc -->
+        <div class="relative w-80 h-20 flex items-center justify-center">
+          <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 320 80" fill="none">
+            <path d="M 10 65 Q 160 5 310 40" stroke="url(#splashGrad1)" stroke-width="2.5" stroke-dasharray="8 7" class="flight-dash-animated opacity-90"/>
+            <defs>
+              <linearGradient id="splashGrad1" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#810B38" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#810B38" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#DCC3AA" stop-opacity="1"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="splash-flight-sweep">
+            <i data-lucide="plane" class="w-8 h-8 glow-pulse-teal" style="color:#F1E2D1;filter:drop-shadow(0 0 18px rgba(129,11,56,0.95));"></i>
+          </div>
+        </div>
+        <!-- Logo emblem with glow -->
+        <div class="splash-logo-core relative">
+          <div class="absolute -inset-8 rounded-full pointer-events-none animate-pulse" style="background:radial-gradient(circle,rgba(129,11,56,0.55),rgba(220,195,170,0.12),transparent);filter:blur(16px);"></div>
+          <img src="/static/assets/logo/travora_emblem.png" alt="TRAVORA" class="w-32 h-32 sm:w-36 sm:h-36 object-contain relative z-10" style="filter:drop-shadow(0 12px 40px rgba(129,11,56,0.90));"/>
+        </div>
+        <!-- Full logo + tagline -->
+        <div class="splash-brand-title space-y-3">
+          <img src="/static/assets/logo/travora_logo_horizontal.png" alt="TRAVORA" class="h-16 sm:h-20 w-auto object-contain mx-auto" style="filter:brightness(0) invert(1) drop-shadow(0 2px 20px rgba(241,226,209,0.6));"/>
+          <p class="text-sm font-bold tracking-widest" style="color:rgba(220,195,170,0.9);letter-spacing:0.25em;">PLAN FREELY. TRAVEL PERSONALLY. ADAPT INSTANTLY.</p>
+        </div>
+        <!-- Progress bar -->
+        <div class="splash-progress-track">
+          <div class="splash-progress-fill"></div>
+        </div>
+        <!-- Skip hint -->
+        <p class="text-[11px] tracking-widest flex items-center space-x-1.5 hover:opacity-100 transition" style="color:rgba(241,226,209,0.55);">
+          <span>TAP TO EXPLORE</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </p>
+      </div>
+    </div>` : ''}
+
+    <div class="space-y-12 sm:space-y-16 pb-16 overflow-hidden">
+
+      <!-- ===================================================================
+           YATRA-STYLE TOP NOTIFICATION RIBBON (DARK RED & RED ACCENTS)
+           =================================================================== -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2">
+        <div class="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-red-600/10 via-[#880808]/10 to-red-600/10 dark:from-[#260406] dark:via-[#5c0606]/40 dark:to-[#260406] border border-red-500/25 text-xs text-red-950 dark:text-red-200 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-sm">
+          <div class="flex items-center space-x-2.5">
+            <span class="px-2.5 py-0.5 rounded bg-gradient-to-r from-[#ea2330] to-[#880808] text-white font-black text-[10px] uppercase tracking-wider shadow-sm">
+              TRAVORA × YATRA PASS
+            </span>
+            <span class="font-semibold text-slate-800 dark:text-slate-200">
+              Book Domestic Flights & Stays with <strong class="text-red-600 dark:text-red-400 font-black">Zero Convenience Fees</strong> using promo code <strong class="text-red-600 dark:text-red-400 underline decoration-red-500">FIRSTFLY</strong>
+            </span>
+          </div>
+          <div class="flex items-center space-x-3 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+            <span class="flex items-center space-x-1">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 text-red-600"></i>
+              <span>100% Price Match</span>
+            </span>
+            <span class="opacity-30">|</span>
+            <span class="flex items-center space-x-1">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Autonomous Disruption Protection</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================
+           HERO SEARCH ENGINE WITH BESPOKE TRAVEL PHOTOGRAPHY & DARK RED OVERLAY
+           =================================================================== -->
+      <section class="relative">
+        
+        <!-- Hero Background Photography (Local High-Res Generated Banner) -->
+        <div class="absolute inset-0 h-[480px] sm:h-[500px] w-full overflow-hidden pointer-events-none -z-10">
+          <img 
+            src="/static/assets/hero/hero_travel_banner.jpg" 
+            alt="TRAVORA Scenic Indian Travel Landscape" 
+            class="w-full h-full object-cover object-center brightness-[0.55] dark:brightness-[0.4] filter saturate-110"
+          />
+          <!-- Dark Burgundy and Wine Vignette Gradient Overlay -->
+          <div class="absolute inset-0 bg-gradient-to-b from-[#1A0707]/90 via-[#541A1A]/60 to-[#110306]"></div>
+          <!-- Subtle Radiant Burgundy Glow -->
+          <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] blur-3xl pointer-events-none rounded-full" style="background:rgba(129,11,56,0.28);"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-6">
+          
+          <!-- Hero Header Tagline -->
+          <div class="text-center text-white space-y-2 max-w-3xl mx-auto">
+            <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full backdrop-blur-md border border-white/20 text-xs font-black text-white shadow-lg mb-1" style="background:linear-gradient(135deg,#810B38,#541A1A);">
+              <i data-lucide="plane" class="w-3.5 h-3.5"></i>
+              <span>INDIA'S PREMIER SMART TRAVEL ENGINE</span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight drop-shadow-md">
+              Book Cheap Flights, Hotels & Dynamic Tours
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-200 max-w-2xl mx-auto drop-shadow">
+              Compare 500+ airlines, 1.2M verified stays, and 517 ground operators with real-time disruption adaptation.
+            </p>
+          </div>
+
+          <!-- YATRA ELEVATED MASTER SEARCH CARD -->
+          <div class="yatra-search-hero surface-card rounded-3xl p-4 sm:p-7 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl space-y-5">
+            
+            <!-- Category Services Bar (Iconic Yatra Ribbon Inside Card) -->
+            <div class="flex items-center space-x-1 sm:space-x-2 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
+              
+              <button 
+                type="button"
+                onclick="window.setLandingSearchTab('flights')" 
+                class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center space-x-2 whitespace-nowrap ${activeSearchTab === 'flights' ? 'bg-gradient-to-r text-white shadow-lg shadow-[#810B38]/30' : 'text-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'}"
+                style="${activeSearchTab === 'flights' ? 'background:linear-gradient(135deg,#810B38,#541A1A)' : ''}">
+                <i data-lucide="plane" class="w-4 h-4"></i>
+                <span>Flights</span>
+              </button>
+
+              <button 
+                type="button"
+                onclick="window.setLandingSearchTab('hotels')" 
+                class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center space-x-2 whitespace-nowrap ${activeSearchTab === 'hotels' ? 'bg-gradient-to-r text-white shadow-lg shadow-[#810B38]/30' : 'text-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'}"
+                style="${activeSearchTab === 'hotels' ? 'background:linear-gradient(135deg,#810B38,#541A1A)' : ''}">
+                <i data-lucide="hotel" class="w-4 h-4"></i>
+                <span>Hotels</span>
+              </button>
+
+              <button 
+                type="button"
+                onclick="window.setLandingSearchTab('packages')" 
+                class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center space-x-2 whitespace-nowrap ${activeSearchTab === 'packages' ? 'bg-gradient-to-r text-white shadow-lg shadow-[#810B38]/30' : 'text-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'}"
+                style="${activeSearchTab === 'packages' ? 'background:linear-gradient(135deg,#810B38,#541A1A)' : ''}">
+                <i data-lucide="palmtree" class="w-4 h-4"></i>
+                <span>Holidays & Packages</span>
+              </button>
+
+              <button 
+                type="button"
+                onclick="window.navigateView('planner')" 
+                class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center space-x-2 whitespace-nowrap text-[#ea2330] dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-800">
+                <i data-lucide="sparkles" class="w-4 h-4 text-[#ea2330]"></i>
+                <span>AI Tour Planner</span>
+              </button>
+
+              <button 
+                type="button"
+                onclick="window.setLandingSearchTab('buses_cabs')" 
+                class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center space-x-2 whitespace-nowrap ${activeSearchTab === 'buses_cabs' ? 'bg-gradient-to-r text-white shadow-lg shadow-[#810B38]/30' : 'text-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'}"
+                style="${activeSearchTab === 'buses_cabs' ? 'background:linear-gradient(135deg,#810B38,#541A1A)' : ''}">
+                <i data-lucide="bus" class="w-4 h-4"></i>
+                <span>Buses & Cabs</span>
+              </button>
+
+              <button 
+                type="button"
+                onclick="window.setLandingSearchTab('trains')" 
+                class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center space-x-2 whitespace-nowrap ${activeSearchTab === 'trains' ? 'bg-gradient-to-r text-white shadow-lg shadow-[#810B38]/30' : 'text-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'}"
+                style="${activeSearchTab === 'trains' ? 'background:linear-gradient(135deg,#810B38,#541A1A)' : ''}">
+                <i data-lucide="train" class="w-4 h-4"></i>
+                <span>Trains</span>
+              </button>
+
+            </div>
+
+            <!-- TAB 1: FLIGHTS SEARCH ENGINE -->
+            ${activeSearchTab === 'flights' ? }`
+              <div class="space-y-4">
+                
+                <!-- Trip Type & Options Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div class="flex items-center space-x-5 font-bold text-slate-800 dark:text-slate-200">
+                    <label class="flex items-center space-x-1.5 cursor-pointer select-none">
+                      <input type="radio" name="flightTripType" value="oneway" ${flightTripType === 'oneway' ? 'checked' : ''} onchange="window.setLandingFlightTripType('oneway')" class="accent-red-600 w-4 h-4" />
+                      <span>One Way</span>
+                    </label>
+                    <label class="flex items-center space-x-1.5 cursor-pointer select-none">
+                      <input type="radio" name="flightTripType" value="roundtrip" ${flightTripType === 'roundtrip' ? 'checked' : ''} onchange="window.setLandingFlightTripType('roundtrip')" class="accent-red-600 w-4 h-4" />
+                      <span>Round Trip</span>
+                    </label>
+                    <label class="flex items-center space-x-1.5 cursor-pointer select-none">
+                      <input type="radio" name="flightTripType" value="multicity" ${flightTripType === 'multicity' ? 'checked' : ''} onchange="window.setLandingFlightTripType('multicity')" class="accent-red-600 w-4 h-4" />
+                      <span>Multi-City</span>
+                    </label>
+                  </div>
+
+                  <!-- Direct Flights & Flexible Dates -->
+                  <div class="flex items-center space-x-3 text-xs">
+                    <label class="flex items-center space-x-1.5 cursor-pointer px-3 py-1 rounded-xl bg-red-500/10 text-red-700 dark:text-red-300 font-bold border border-red-500/20 select-none">
+                      <input type="checkbox" id="chk-flexible-dates" ${isFlexibleDates ? 'checked' : ''} onchange="window.toggleLandingFlexibleDates(this.checked)" class="accent-red-600" />
+                      <span>Flexible Dates (+/- 3 Days Matrix)</span>
+                    </label>
+                    <label class="hidden sm:flex items-center space-x-1.5 cursor-pointer text-slate-500 select-none">
+                      <input type="checkbox" ${isDirectOnly ? 'checked' : ''} onchange="window.toggleDirectFlights(this.checked)" class="accent-red-600" />
+                      <span>Non-Stop Only</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- 4 Major Search Inputs (From, To, Departure, Travellers) with Swap Button -->
+                <div class="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  
+                  <!-- DEPART FROM CITY -->
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-slate-900 transition">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>Depart From</span>
+                      <span class="font-mono text-red-600 dark:text-red-400 font-extrabold">${fromCode}</span>
+                    </div>
+                    <input 
+                      type="text" 
+                      id="search-from-city" 
+                      value="${fromCity}" 
+                      onchange="window.landingFromCity = this.value;"
+                      class="w-full font-black text-sm sm:text-base text-slate-900 dark:text-white bg-transparent outline-none"
+                    />
+                    <div class="text-[11px] text-slate-400 truncate">Indira Gandhi International Airport</div>
+                  </div>
+
+                  <!-- CIRCULAR SWAP BUTTON -->
+                  <button 
+                    type="button"
+                    onclick="window.swapLandingCities()" 
+                    title="Swap Origin and Destination"
+                    class="hidden sm:flex absolute left-1/2 lg:left-1/4 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-red-600 text-slate-600 dark:text-slate-300 hover:text-red-600 shadow-md items-center justify-center transition transform hover:rotate-180">
+                    <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                  </button>
+
+                  <!-- GOING TO CITY -->
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-slate-900 transition">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>Going To</span>
+                      <span class="font-mono text-red-600 dark:text-red-400 font-extrabold">${toCode}</span>
+                    </div>
+                    <input 
+                      type="text" 
+                      id="search-to-city" 
+                      value="${toCity}" 
+                      onchange="window.landingToCity = this.value;"
+                      class="w-full font-black text-sm sm:text-base text-slate-900 dark:text-white bg-transparent outline-none"
+                    />
+                    <div class="text-[11px] text-slate-400 truncate">Dabolim / Manohar Mopa Airport</div>
+                  </div>
+
+                  <!-- DEPARTURE & RETURN DATES -->
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-slate-900 transition">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>Departure - Return</span>
+                      <span class="text-[10px] text-red-600 font-bold">${flightTripType === 'roundtrip' ? 'Round Trip' : 'One Way'}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                      <input 
+                        type="date" 
+                        id="search-dep-date" 
+                        value="2026-10-28" 
+                        class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none"
+                      />
+                      ${flightTripType === 'roundtrip' ? `
+                        <span class="text-slate-300">-</span>
+                        <input 
+                          type="date" 
+                          id="search-ret-date" 
+                          value="2026-10-31" 
+                          class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none"
+                        />
+                      }` : ''}
+                    </div>
+                    <div class="text-[11px] text-red-600 dark:text-red-400 font-bold">
+                      ${isFlexibleDates ? 'Low fare matrix flags cheapest dates' : 'Exact date rates'}
+                    </div>
+                  </div>
+
+                  <!-- TRAVELLERS & CABIN CLASS -->
+                  <div class="relative p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1 focus-within:border-red-500 focus-within:bg-white dark:focus-within:bg-slate-900 transition">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>Travellers & Class</span>
+                      <span class="text-[10px] text-[#ea2330] font-bold">${cabinClass}</span>
+                    </div>
+                    <div 
+                      onclick="window.toggleTravellerDropdown()" 
+                      class="cursor-pointer flex items-center justify-between pt-0.5">
+                      <div>
+                        <div class="font-black text-sm sm:text-base text-slate-900 dark:text-white">
+                          ${totalTravellers} Traveller${totalTravellers > 1 ? 's' : ''}
+                        </div>
+                        <div class="text-[11px] text-slate-400">${cabinClass}, Standard Baggage</div>
+                      </div>
+                      <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+                    </div>
+
+                    <!-- Interactive Travellers Popover Selector -->
+                    ${isTravellerDropdownOpen ? `
+                      <div class="absolute top-full left-0 right-0 mt-2 z-30 p-4 rounded-2xl surface-card shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 bg-white dark:bg-slate-900">
+                        <div class="space-y-3">
+                          
+                          <!-- Adults -->
+                          <div class="flex items-center justify-between">
+                            <div>
+                              <div class="text-xs font-bold text-slate-800 dark:text-white">Adults (12+ yrs)</div>
+                              <div class="text-[10px] text-slate-400">On the day of travel</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                              <button type="button" onclick="window.changeAdults(-1)" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 hover:border-red-600">-</button>
+                              <span class="w-6 text-center font-black text-xs">${adults}</span>
+                              <button type="button" onclick="window.changeAdults(1)" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 hover:border-red-600">+</button>
+                            </div>
+                          </div>
+
+                          <!-- Children -->
+                          <div class="flex items-center justify-between">
+                            <div>
+                              <div class="text-xs font-bold text-slate-800 dark:text-white">Children (2-12 yrs)</div>
+                              <div class="text-[10px] text-slate-400">With separate seat</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                              <button type="button" onclick="window.changeChildren(-1)" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 hover:border-red-600">-</button>
+                              <span class="w-6 text-center font-black text-xs">${children}</span>
+                              <button type="button" onclick="window.changeChildren(1)" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 hover:border-red-600">+</button>
+                            </div>
+                          </div>
+
+                          <!-- Infants -->
+                          <div class="flex items-center justify-between">
+                            <div>
+                              <div class="text-xs font-bold text-slate-800 dark:text-white">Infants (&lt; 2 yrs)</div>
+                              <div class="text-[10px] text-slate-400">On lap</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                              <button type="button" onclick="window.changeInfants(-1)" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 hover:border-red-600">-</button>
+                              <span class="w-6 text-center font-black text-xs">${infants}</span>
+                              <button type="button" onclick="window.changeInfants(1)" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 hover:border-red-600">+</button>
+                            </div>
+                          </div>
+
+                        </div>
+
+                        <!-- Cabin Class Selection -->
+                        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                          <div class="text-[10px] font-bold text-slate-400 uppercase">Cabin Class</div>
+                          <div class="grid grid-cols-3 gap-1.5 text-[11px] font-bold">
+                            ${['Economy', 'Premium', 'Business'].map(cls => }`
+                              <button 
+                                type="button" 
+                                onclick="window.setCabinClass('${cls}')" 
+                                class="py-1.5 px-2 rounded-xl text-center border ${cabinClass === cls ? 'bg-gradient-to-r from-[#ea2330] to-[#880808] text-white border-red-600 shadow' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'}">
+                                ${cls}
+                              </button>
+                            `).join('')}
+                          </div>
+                        </div>
+
+                        <button 
+                          type="button" 
+                          onclick="window.toggleTravellerDropdown()" 
+                          class="w-full py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs">
+                          Done
+                        </button>
+                      </div>
+                    }` : ''}
+                  </div>
+
+                </div>
+
+                <!-- Quick Indian City Selection Pills -->
+                <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+                  <span class="text-[11px] font-bold text-slate-400 uppercase">Quick Jump:</span>
+                  ${[
+                    { name: 'Goa', full: 'Goa (GOI / GOX)' },
+                    { name: 'Mumbai', full: 'Mumbai (BOM)' },
+                    { name: 'Delhi', full: 'New Delhi (DEL)' },
+                    { name: 'Bengaluru', full: 'Bengaluru (BLR)' },
+                    { name: 'Jaipur', full: 'Jaipur (JAI)' },
+                    { name: 'Srinagar', full: 'Srinagar (SXR)' },
+                    { name: 'Kochi', full: 'Kochi (COK)' },
+                    { name: 'Manali', full: 'Kullu Manali (KUU)' },
+                    { name: 'Andaman', full: 'Port Blair (IXZ)' },
+                    { name: 'Udaipur', full: 'Udaipur (UDR)' },
+                    { name: 'Varanasi', full: 'Varanasi (VNS)' }
+                  ].map(city => `
+                    <button 
+                      type="button"
+                      onclick="window.setQuickDestination('${city.full}')"
+                      class="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-red-600 hover:border-red-500 bg-white dark:bg-slate-900 text-[11px] font-medium transition">
+                      ${city.name}
+                    </button>
+                  }`).join('')}
+                </div>
+
+                <!-- SPECIAL FARE CATEGORIES -->
+                <div class="flex flex-wrap items-center gap-2 pt-2 text-xs">
+                  <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider">Special Fares:</span>
+                  <button 
+                    type="button"
+                    onclick="window.setLandingSpecialFare('regular')" 
+                    class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${specialFare === 'regular' ? 'bg-red-50 dark:bg-red-950/60 border-red-600 text-red-700 dark:text-red-300 font-black shadow-sm' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'}">
+                    Regular Fares
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="window.setLandingSpecialFare('forces')" 
+                    class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${specialFare === 'forces' ? 'bg-red-50 dark:bg-red-950/60 border-red-600 text-red-700 dark:text-red-300 font-black shadow-sm' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'}">
+                    Armed Forces (Flat ₹600 Off)
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="window.setLandingSpecialFare('student')" 
+                    class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${specialFare === 'student' ? 'bg-red-50 dark:bg-red-950/60 border-red-600 text-red-700 dark:text-red-300 font-black shadow-sm' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'}">
+                    Student Fare (Extra 10kg Baggage)
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="window.setLandingSpecialFare('senior')" 
+                    class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${specialFare === 'senior' ? 'bg-red-50 dark:bg-red-950/60 border-red-600 text-red-700 dark:text-red-300 font-black shadow-sm' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'}">
+                    Senior Citizen (60+ Yrs)
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="window.setLandingSpecialFare('doctors')" 
+                    class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${specialFare === 'doctors' ? 'bg-red-50 dark:bg-red-950/60 border-red-600 text-red-700 dark:text-red-300 font-black shadow-sm' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'}">
+                    Doctors & Nurses
+                  </button>
+                </div>
+
+                <!-- SUBMIT SEARCH BUTTON (GLOSSY RED TO DARK RED) -->
+                <div class="pt-3 flex justify-center">
+                  <button 
+                    type="button"
+                    onclick="window.executeLandingSearch('flights')" 
+                    class="w-full sm:w-auto px-16 py-4 rounded-2xl bg-gradient-to-r from-[#ea2330] via-[#d91b28] to-[#880808] hover:from-[#d91b28] hover:to-[#5c0606] text-white font-black text-base shadow-xl shadow-red-600/35 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    <span>Search Flights</span>
+                  </button>
+                </div>
+
+              </div>
+            ` : activeSearchTab === 'hotels' ? }`
+              <!-- TAB 2: HOTELS SEARCH -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">City or Property Name</div>
+                    <input type="text" id="hotel-city" value="Goa, India" class="w-full font-black text-sm sm:text-base text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">North & South Goa Beachfronts</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Check-in Date</div>
+                    <input type="date" value="2026-10-28" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">From 14:00 PM Check-in</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Check-out Date</div>
+                    <input type="date" value="2026-10-31" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">3 Nights Stay</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Rooms & Guests</div>
+                    <select class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none">
+                      <option>1 Room, 2 Adults</option>
+                      <option>2 Rooms, 4 Adults</option>
+                      <option>Private Luxury Villa (Up to 8 Guests)</option>
+                    </select>
+                    <div class="text-[11px] text-emerald-600 font-bold">Free Cancellation Available</div>
+                  </div>
+                </div>
+                <div class="pt-3 flex justify-center">
+                  <button type="button" onclick="window.executeLandingSearch('hotels')" class="w-full sm:w-auto px-16 py-4 rounded-2xl bg-gradient-to-r from-[#ea2330] via-[#d91b28] to-[#880808] hover:from-[#d91b28] hover:to-[#5c0606] text-white font-black text-base shadow-xl shadow-red-600/30 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    <span>Search Hotels</span>
+                  </button>
+                </div>
+              </div>
+            ` : activeSearchTab === 'packages' ? }`
+              <!-- TAB 3: HOLIDAY PACKAGES -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Destination</div>
+                    <input type="text" value="Goa Coastal & Heritage" class="w-full font-black text-sm sm:text-base text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">North Goa & South Beaches</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Duration</div>
+                    <select class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none">
+                      <option>3 to 4 Days (Weekend Escapes)</option>
+                      <option selected>5 to 6 Days (Classic Tour)</option>
+                      <option>7+ Days (Complete Immersion)</option>
+                    </select>
+                    <div class="text-[11px] text-slate-400">Daily Guided Experiences</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Theme</div>
+                    <select class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none">
+                      <option>Beach & Adventure</option>
+                      <option>Royal Heritage & Forts</option>
+                      <option>Backwaters & Nature</option>
+                      <option>Honeymoon & Romantic</option>
+                    </select>
+                    <div class="text-[11px] text-slate-400">Verified Operator Dispatch</div>
+                  </div>
+                </div>
+                <div class="pt-3 flex justify-center">
+                  <button type="button" onclick="window.executeLandingSearch('packages')" class="w-full sm:w-auto px-16 py-4 rounded-2xl bg-gradient-to-r from-[#ea2330] via-[#d91b28] to-[#880808] hover:from-[#d91b28] hover:to-[#5c0606] text-white font-black text-base shadow-xl shadow-red-600/30 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="palmtree" class="w-5 h-5"></i>
+                    <span>Explore Packages</span>
+                  </button>
+                </div>
+              </div>
+            ` : activeSearchTab === 'buses_cabs' ? }`
+              <!-- TAB 4: BUSES & CABS -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Pick-up City</div>
+                    <input type="text" value="Mumbai City Center" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">Doorstep Chauffeur Pickup</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Drop Destination</div>
+                    <input type="text" value="North Goa (Calangute / Panaji)" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">Express Highway Route</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Travel Date</div>
+                    <input type="date" value="2026-10-28" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">GPS Monitored Fleet</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Vehicle Preference</div>
+                    <select class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none">
+                      <option>AC Innova Crysta (6 Seater)</option>
+                      <option>Sedan Chauffeur (4 Seater)</option>
+                      <option>Volvo Multi-Axle Luxury Sleeper</option>
+                    </select>
+                    <div class="text-[11px] text-slate-400">Clean Fleet Guaranteed</div>
+                  </div>
+                </div>
+                <div class="pt-3 flex justify-center">
+                  <button type="button" onclick="window.executeLandingSearch('buses_cabs')" class="w-full sm:w-auto px-16 py-4 rounded-2xl bg-gradient-to-r from-[#ea2330] via-[#d91b28] to-[#880808] hover:from-[#d91b28] hover:to-[#5c0606] text-white font-black text-base shadow-xl shadow-red-600/30 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="bus" class="w-5 h-5"></i>
+                    <span>Find Cabs & Buses</span>
+                  </button>
+                </div>
+              </div>
+            }` : `
+              <!-- TAB 5: TRAINS -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">From Station</div>
+                    <input type="text" value="New Delhi (NDLS)" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">Major Indian Railway Hub</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">To Station</div>
+                    <input type="text" value="Madgaon Junction (MAO)" class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none" />
+                    <div class="text-[11px] text-slate-400">Goa Main Railway Hub</div>
+                  </div>
+                  <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/80 space-y-1">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">Class & Quota</div>
+                    <select class="w-full font-bold text-xs sm:text-sm text-slate-900 dark:text-white bg-transparent outline-none">
+                      <option>Vande Bharat / Tejas (Executive EC)</option>
+                      <option>AC 2 Tier (2A) - Confirmed Berths</option>
+                      <option>AC 3 Tier (3A)</option>
+                    </select>
+                    <div class="text-[11px] text-slate-400">IRCTC Live Availability</div>
+                  </div>
+                </div>
+                <div class="pt-3 flex justify-center">
+                  <button type="button" onclick="window.executeLandingSearch('trains')" class="w-full sm:w-auto px-16 py-4 rounded-2xl bg-gradient-to-r from-[#ea2330] via-[#d91b28] to-[#880808] hover:from-[#d91b28] hover:to-[#5c0606] text-white font-black text-base shadow-xl shadow-red-600/30 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="train" class="w-5 h-5"></i>
+                    <span>Check Train Berths</span>
+                  </button>
+                </div>
+              </div>
+            `}
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           NEW VISUAL FEATURE: TOP 8 INDIAN DREAM DESTINATIONS (HIGH-RES CARDS)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        <div class="flex items-end justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+              <span>Trending Across India</span>
+            </div>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              Top Indian Dream Destinations
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Hand-verified flight & resort rates with live weather telemetry and instant 1-click booking.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            onclick="window.executeLandingSearch('flights')" 
+            class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline flex items-center space-x-1">
+            <span>Explore All 28 States</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          ${topDestinations.map(dest => }`
+            <div 
+              onclick="window.selectDestinationCard('${dest.name}', '${dest.cityFull}')"
+              class="group surface-card rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-red-500/80 shadow-xl flex flex-col justify-between cursor-pointer transition transform hover:-translate-y-1.5 duration-300">
+              
+              <!-- Card Photo Header -->
+              <div class="relative h-56 w-full overflow-hidden bg-slate-900">
+                <img 
+                  src="${dest.img}" 
+                  alt="${dest.name} - ${dest.tagline}" 
+                  class="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
+                  loading="lazy"
+                />
+                
+                <!-- Dark Red Vignette Gradient -->
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent"></div>
+                
+                <!-- Category Tag Badge -->
+                <div class="absolute top-3 left-3">
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-[#ea2330] to-[#880808] text-white shadow-md">
+                    ${dest.tag}
+                  </span>
+                </div>
+
+                <!-- Weather Pill -->
+                <div class="absolute top-3 right-3">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-amber-300 border border-white/10 flex items-center space-x-1">
+                    <i data-lucide="${dest.weatherIcon}" class="w-3 h-3 text-amber-400"></i>
+                    <span>${dest.weather}</span>
+                  </span>
+                </div>
+
+                <!-- City & Tagline on Image -->
+                <div class="absolute bottom-3 left-3 right-3 text-white">
+                  <h3 class="font-black text-xl tracking-tight leading-tight">${dest.name}</h3>
+                  <p class="text-[11px] text-slate-200 truncate mt-0.5">${dest.tagline}</p>
+                </div>
+              </div>
+
+              <!-- Card Bottom Details -->
+              <div class="p-4 space-y-3 bg-white dark:bg-slate-900 flex-1 flex flex-col justify-between">
+                
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span class="flex items-center space-x-1 font-semibold">
+                    <i data-lucide="hotel" class="w-3.5 h-3.5 text-red-600"></i>
+                    <span>${dest.hotelsCount}</span>
+                  </span>
+                  <span class="text-[11px] text-emerald-600 font-bold flex items-center space-x-1">
+                    <i data-lucide="check" class="w-3 h-3"></i>
+                    <span>Verified Routes</span>
+                  </span>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Flights starting from</span>
+                    <span class="text-lg font-black text-red-600 dark:text-red-400">
+                      ₹${dest.fare.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  <span class="px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/60 group-hover:bg-red-600 group-hover:text-white text-red-600 dark:text-red-300 font-extrabold text-xs transition border border-red-200 dark:border-red-900/50 flex items-center space-x-1 shadow-sm">
+                    <span>Explore</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           NEW VISUAL FEATURE: EXPLORE INDIA BY THEME (PHOTO TILES)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+        
+        <div class="flex items-end justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="compass" class="w-4 h-4"></i>
+              <span>Curated Travel Experiences</span>
+            </div>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              Explore India by Vibe & Theme
+            </h2>
+          </div>
+          <span class="text-xs text-slate-500 hidden sm:inline">8 Specialized Holiday Vibe Categories</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          ${travelThemes.map(theme => }`
+            <div 
+              onclick="window.setQuickDestination('${theme.dest}')"
+              class="relative rounded-2xl h-44 overflow-hidden group cursor-pointer border border-slate-200 dark:border-slate-800 shadow-lg">
+              <img 
+                src="${theme.img}" 
+                alt="${theme.title}" 
+                class="w-full h-full object-cover group-hover:scale-115 transition duration-700 brightness-[0.75] group-hover:brightness-[0.9]"
+                loading="lazy"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-[#260406]/95 via-[#5c0606]/40 to-transparent"></div>
+              
+              <div class="absolute bottom-3 left-3 right-3 text-white space-y-0.5">
+                <span class="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[9px] uppercase tracking-wider inline-block">
+                  ${theme.count}
+                </span>
+                <h4 class="font-extrabold text-sm sm:text-base leading-tight group-hover:text-red-300 transition">
+                  ${theme.title}
+                </h4>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           LIVE INTERACTIVE FLIGHT SEARCH RESULTS (YATRA REAL TIME ENGINE)
+           =================================================================== -->
+      ${(isSearchActive || activeSearchTab === 'flights') ? }`
+        <section id="search-results-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          
+          <!-- Results Header & 7-Day Fare Slider -->
+          <div class="surface-card rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <div class="flex items-center space-x-2 text-xs font-bold text-red-600 dark:text-red-400">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                  <span>5 Flights Found • ${fromCity} to ${toCity}</span>
+                </div>
+                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                  Departing Wed, 28 Oct 2026 • 1 Adult, ${cabinClass}
+                </h3>
+              </div>
+
+              <!-- Quick Fare Sort / Filters -->
+              <div class="flex items-center space-x-2 text-xs">
+                <span class="text-slate-400 font-semibold">Sort By:</span>
+                <span class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#ea2330] to-[#880808] text-white font-extrabold shadow-sm">
+                  Cheapest First (₹3,499)
+                </span>
+                <button onclick="window.sortFlightsByDuration()" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-400">
+                  Fastest (2h 10m)
+                </button>
+              </div>
+            </div>
+
+            <!-- 7-Day Fare Slider Strip (Yatra Signature Feature) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center text-xs">
+              ${[
+                { date: 'Mon, 26 Oct', fare: 4100, active: false },
+                { date: 'Tue, 27 Oct', fare: 3950, active: false },
+                { date: 'Wed, 28 Oct', fare: 3499, active: true, tag: 'Cheapest' },
+                { date: 'Thu, 29 Oct', fare: 3850, active: false },
+                { date: 'Fri, 30 Oct', fare: 4200, active: false },
+                { date: 'Sat, 31 Oct', fare: 4890, active: false },
+                { date: 'Sun, 01 Nov', fare: 5150, active: false }
+              ].map(f => `
+                <div 
+                  onclick="window.selectDateFare('${f.date}', ${f.fare})"
+                  class="p-2.5 rounded-xl border cursor-pointer transition ${f.active ? 'bg-gradient-to-r from-[#ea2330] to-[#880808] text-white border-red-600 shadow-md font-black' : 'border-slate-200 dark:border-slate-700 hover:border-red-500 surface-card text-slate-700 dark:text-slate-300'}">
+                  <div class="text-[10px] ${f.active ? 'text-red-100' : 'text-slate-400'}">${f.date}</div>
+                  <div class="font-extrabold text-xs sm:text-sm mt-0.5">₹${f.fare.toLocaleString('en-IN')}</div>
+                  ${f.tag ? }`<span class="inline-block text-[9px] px-1.5 rounded bg-white text-red-600 font-black mt-0.5">${f.tag}</span>` : ''}
+                </div>
+              }`).join('')}
+            </div>
+
+          </div>
+
+          <!-- Flight Result Cards -->
+          <div class="space-y-3">
+            ${liveFlightResults.map(flight => `
+              <div class="flight-card p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm hover:shadow-md transition">
+                
+                <!-- Airline Info -->
+                <div class="flex items-center space-x-3 sm:w-44">
+                  <div class="w-10 h-10 rounded-xl ${flight.color} text-white font-black flex items-center justify-center text-xs shadow-md shrink-0">
+                    ${flight.airlineLogo}
+                  </div>
+                  <div>
+                    <h4 class="font-black text-sm text-slate-900 dark:text-white leading-tight">
+                      ${flight.airline}
+                    </h4>
+                    <span class="text-[11px] font-mono text-slate-400">${flight.code}</span>
+                  </div>
+                </div>
+
+                <!-- Schedule Strip -->
+                <div class="flex items-center justify-between sm:justify-center sm:space-x-8 flex-1">
+                  
+                  <!-- Departure -->
+                  <div class="text-left sm:text-right">
+                    <div class="text-lg sm:text-xl font-black text-slate-900 dark:text-white">${flight.depTime}</div>
+                    <div class="text-[11px] font-bold text-slate-500">${flight.fromCode} • New Delhi</div>
+                  </div>
+
+                  <!-- Flight Duration & Flight Track -->
+                  <div class="flex flex-col items-center px-2 sm:px-4">
+                    <span class="text-[10px] text-slate-400 font-bold">${flight.duration}</span>
+                    <div class="w-24 sm:w-32 h-[2px] bg-slate-200 dark:bg-slate-700 relative my-1">
+                      <div class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-600"></div>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">${flight.stops}</span>
+                  </div>
+
+                  <!-- Arrival -->
+                  <div class="text-right sm:text-left">
+                    <div class="text-lg sm:text-xl font-black text-slate-900 dark:text-white">${flight.arrTime}</div>
+                    <div class="text-[11px] font-bold text-slate-500">${flight.toCode} • Goa</div>
+                  </div>
+
+                </div>
+
+                <!-- Baggage & Amenities Badges -->
+                <div class="hidden xl:flex flex-col text-left space-y-1 text-[11px] text-slate-500 w-44">
+                  <span class="flex items-center space-x-1">
+                    <i data-lucide="briefcase" class="w-3 h-3 text-slate-400"></i>
+                    <span>${flight.baggage}</span>
+                  </span>
+                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold">${flight.refundable}</span>
+                  <span class="text-[10px] text-slate-400">${flight.amenities[0]}</span>
+                </div>
+
+                <!-- Pricing & Book Now CTA -->
+                <div class="flex items-center justify-between lg:justify-end lg:space-x-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
+                  <div class="text-left lg:text-right">
+                    <div class="flex items-baseline space-x-1.5">
+                      <span class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
+                        ₹${flight.price.toLocaleString('en-IN')}
+                      </span>
+                      <span class="text-xs text-slate-400 line-through">₹${flight.originalPrice.toLocaleString('en-IN')}</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-600 block leading-none mt-0.5">
+                      ${flight.discount} • ₹0 Convenience Fee
+                    </span>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    onclick="window.bookFlightDirectly('${flight.code}', '${flight.airline}', ${flight.price}, '${flight.depTime}', '${flight.arrTime}')"
+                    class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ea2330] to-[#880808] hover:from-[#d91b28] hover:to-[#5c0606] text-white font-black text-xs shadow-md shadow-red-600/30 transition flex items-center space-x-1.5 hover:-translate-y-0.5">
+                    <span>Book Now</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+
+              </div>
+            }`).join('')}
+          </div>
+
+        </section>
+      ` : ''}
+
+      <!-- ===================================================================
+           POPULAR DOMESTIC FLIGHT ROUTES (YATRA ICONIC GRID)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+        
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="compass" class="w-4 h-4"></i>
+              <span>Most Booked Flights</span>
+            </div>
+            <h2 class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              Popular Domestic Flight Routes
+            </h2>
+          </div>
+          <span class="text-xs text-slate-500 hidden sm:inline">Tap any route to search lowest fare</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          ${popularRoutes.map(route => }`
+            <div 
+              onclick="window.selectPopularRoute('${route.from}', '${route.to}')"
+              class="yatra-route-pill surface-card rounded-2xl p-4 cursor-pointer shadow-sm flex items-center justify-between group">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-1 text-xs font-black text-slate-900 dark:text-white group-hover:text-red-600 transition">
+                  <span>${route.fromName}</span>
+                  <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-600"></i>
+                  <span>${route.toName}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 flex items-center space-x-1.5">
+                  <span>${route.airline}</span>
+                  <span class="opacity-40">•</span>
+                  <span>${route.duration}</span>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 block">Starting at</span>
+                <span class="text-sm font-black text-red-600 dark:text-red-400">
+                  ₹${route.fare.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           YATRA-STYLE SPECIAL BANK OFFERS & PROMO COUPONS
+           =================================================================== -->
+      <section id="yatra-offers-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+        
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="tag" class="w-4 h-4"></i>
+              <span>Bank Discounts & Promo Codes</span>
+            </div>
+            <h2 class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              Exclusive Offers on Flights, Hotels & Tours
+            </h2>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${promoOffers.map(offer => }`
+            <div class="yatra-coupon-card p-5 flex flex-col justify-between space-y-4 shadow-sm">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/60">
+                    ${offer.bank}
+                  </span>
+                  <i data-lucide="${offer.icon}" class="w-4 h-4 text-red-600"></i>
+                </div>
+                <h4 class="font-black text-base text-slate-900 dark:text-white">
+                  ${offer.discount}
+                </h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  ${offer.desc}
+                </p>
+              </div>
+
+              <div class="pt-3 border-t border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="font-mono text-xs font-black tracking-wider text-slate-800 dark:text-slate-200 px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 select-all">
+                  ${offer.code}
+                </div>
+                <button 
+                  type="button" 
+                  onclick="window.copyPromoCode('${offer.code}')" 
+                  class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline flex items-center space-x-1">
+                  <span>Copy Code</span>
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           INDIA LUXURY HOTELS SPOTLIGHT (8 HIGH-RES PROPERTIES)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="hotel" class="w-4 h-4"></i>
+              <span>TRAVORA Premier Collection</span>
+            </div>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              Top Rated Luxury Resorts & Heritage Palaces
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Hand-verified 5-star beachfront villas and royal palace suites with free cancellation.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            onclick="window.setLandingSearchTab('hotels')" 
+            class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline flex items-center space-x-1">
+            <span>View All Hotels</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          ${luxuryHotels.map(h => }`
+            <div class="surface-card rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col justify-between group hover:border-red-500 transition">
+              <div>
+                <div class="h-48 w-full relative overflow-hidden bg-slate-900">
+                  <img 
+                    src="${h.img}" 
+                    alt="${h.name}" 
+                    class="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
+                    loading="lazy"
+                  />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                  
+                  <div class="absolute top-3 left-3">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-black/60 backdrop-blur-md text-amber-300 border border-white/10">
+                      ${h.tag}
+                    </span>
+                  </div>
+
+                  <div class="absolute bottom-3 left-3 text-white">
+                    <div class="font-extrabold text-base tracking-tight leading-snug">${h.name}</div>
+                    <div class="text-[11px] text-slate-300 font-medium">${h.location}</div>
+                  </div>
+                </div>
+
+                <div class="p-5 space-y-3 text-xs">
+                  <div class="flex items-center justify-between text-slate-500 text-[11px]">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">${h.rating}/5 Rating</span>
+                    <span>${h.reviews}</span>
+                  </div>
+
+                  <div class="flex flex-wrap gap-1">
+                    ${h.amenities.map(a => `
+                      <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 font-medium">
+                        ${a}
+                      </span>
+                    }`).join('')}
+                  </div>
+
+                  <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span class="text-[10px] text-slate-400 block">Starting per night</span>
+                      <span class="font-black text-base text-slate-900 dark:text-white">₹${h.price}</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      Free Cancellation
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-5 pt-0">
+                <button 
+                  type="button" 
+                  onclick="window.startPlanningFor('${h.location.split(',')[1] ? h.location.split(',')[1].trim() : 'Goa'}')" 
+                  class="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#ea2330] hover:to-[#880808] hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs transition border border-slate-200 dark:border-slate-700 flex items-center justify-center space-x-1.5">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  <span>Reserve Stay</span>
+                </button>
+              </div>
+
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           HANDCRAFTED HOLIDAY PACKAGES (6 ALL-INCLUSIVE ITINERARIES)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="palmtree" class="w-4 h-4"></i>
+              <span>Holiday Packages</span>
+            </div>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
+              Curated Indian Escapes with Flights & Operator Included
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Verified ground fleets and daily excursions backed by dynamic disruption adaptation.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            onclick="window.setLandingSearchTab('packages')" 
+            class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline flex items-center space-x-1">
+            <span>Explore All Packages</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${holidayPackages.map(pkg => }`
+            <div class="surface-card rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col justify-between group hover:border-red-500 transition">
+              <div>
+                <div class="h-52 w-full relative overflow-hidden bg-slate-900">
+                  <img 
+                    src="${pkg.img}" 
+                    alt="${pkg.name}" 
+                    class="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
+                    loading="lazy"
+                  />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                  
+                  <div class="absolute top-3 left-3">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-gradient-to-r from-[#ea2330] to-[#880808] text-white shadow-sm">
+                      ${pkg.tag}
+                    </span>
+                  </div>
+
+                  <div class="absolute bottom-3 left-3 right-3 text-white">
+                    <div class="font-extrabold text-base tracking-tight leading-snug">${pkg.name}</div>
+                    <div class="text-[11px] text-slate-300 font-medium">${pkg.duration}</div>
+                  </div>
+                </div>
+
+                <div class="p-5 space-y-3 text-xs">
+                  <div class="flex items-center justify-between text-slate-500 text-[11px]">
+                    <span class="font-bold text-slate-800 dark:text-slate-200">${pkg.rating} Rating</span>
+                    <span>${pkg.operator}</span>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    ${pkg.inclusions.slice(0, 3).map(inc => `
+                      <div class="flex items-center space-x-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500 shrink-0"></i>
+                        <span>${inc}</span>
+                      </div>
+                    }`).join('')}
+                  </div>
+
+                  <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span class="text-[10px] text-slate-400 block font-semibold">Starting per person</span>
+                      <span class="font-black text-lg text-red-600 dark:text-red-400">₹${pkg.price.toLocaleString('en-IN')}</span>
+                    </div>
+                    <span class="px-2.5 py-1 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      Flights Included
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-5 pt-0">
+                <button 
+                  type="button" 
+                  onclick="window.startPlanningFor('${pkg.dest}')" 
+                  class="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 dark:from-[#260406] dark:to-[#5c0606]/30 hover:from-[#ea2330] hover:to-[#880808] hover:text-white text-red-600 dark:text-red-300 font-bold text-xs transition border border-red-200 dark:border-red-800 flex items-center justify-center space-x-1.5">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                  <span>Customize in AI Planner</span>
+                </button>
+              </div>
+
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           NEW VISUAL FEATURE: TRAVELER STORIES & LIVE COMMUNITY PHOTO WALL
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        <div class="text-center space-y-2 max-w-2xl mx-auto">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs uppercase tracking-wider">
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+            <span>Real Traveler Photo Moments</span>
+          </div>
+          <h2 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            Loved by 50 Million+ Explorers
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Real photos and genuine feedback from travelers exploring India with TRAVORA.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${travelerStories.map(story => }`
+            <div class="surface-card rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col justify-between group hover:border-red-500 transition">
+              
+              <!-- Trip Visual -->
+              <div class="h-44 w-full relative overflow-hidden bg-slate-900">
+                <img 
+                  src="${story.img}" 
+                  alt="${story.trip}" 
+                  class="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                
+                <div class="absolute top-3 left-3">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-black/60 backdrop-blur-md text-white border border-white/20">
+                    ${story.badge}
+                  </span>
+                </div>
+
+                <div class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center space-x-1.5">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-400"></i>
+                  <span>${story.trip}</span>
+                </div>
+              </div>
+
+              <!-- Quote & User Avatar -->
+              <div class="p-5 space-y-4 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900">
+                <div class="space-y-2">
+                  <div class="flex items-center space-x-1 text-amber-400">
+                    ${Array.from({ length: story.rating }).map(() => `
+                      <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
+                    `).join('')}
+                  </div>
+                  <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">
+                    "${story.quote}"
+                  </p>
+                </div>
+
+                <div class="flex items-center space-x-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <img 
+                    src="${story.avatar}" 
+                    alt="${story.name}" 
+                    class="w-10 h-10 rounded-full object-cover border-2 border-red-500 shadow-sm"
+                  />
+                  <div>
+                    <h4 class="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">${story.name}</h4>
+                    <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1">
+                      <i data-lucide="shield-check" class="w-3 h-3"></i>
+                      <span>Verified Traveller</span>
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          `).join('')}
+        </div>
+
+      </section>
+
+      <!-- ===================================================================
+           AIRLINE & HOSPITALITY BRAND PARTNERS STRIP
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="surface-card rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-md space-y-4">
+          <div class="text-center">
+            <span class="text-[11px] font-black tracking-widest text-slate-400 uppercase">
+              OFFICIAL AIRLINE & HOSPITALITY NETWORK PARTNERS
+            </span>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-10 opacity-70 dark:opacity-60 text-slate-700 dark:text-slate-300 font-black text-xs sm:text-sm">
+            <span class="flex items-center space-x-1.5"><i data-lucide="plane" class="w-4 h-4 text-indigo-600"></i><span>IndiGo</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="plane" class="w-4 h-4 text-red-600"></i><span>Air India</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="plane" class="w-4 h-4 text-purple-700"></i><span>Vistara</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="plane" class="w-4 h-4 text-orange-600"></i><span>Akasa Air</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="plane" class="w-4 h-4 text-red-500"></i><span>SpiceJet</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="hotel" class="w-4 h-4 text-amber-600"></i><span>Taj Hotels</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="hotel" class="w-4 h-4 text-emerald-600"></i><span>Oberoi Resorts</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="hotel" class="w-4 h-4 text-blue-600"></i><span>Marriott Bonvoy</span></span>
+            <span class="flex items-center space-x-1.5"><i data-lucide="hotel" class="w-4 h-4 text-rose-600"></i><span>ITC Luxury</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           WHY BOOK WITH TRAVORA (YATRA TRUST BADGES)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="surface-card rounded-3xl p-8 sm:p-12 border border-slate-200 dark:border-slate-800 shadow-xl space-y-8">
+          
+          <div class="text-center space-y-2 max-w-2xl mx-auto">
+            <h3 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white">
+              Why 50 Million+ Travellers Choose TRAVORA
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              India's premier travel technology platform with zero hidden fees and real-time disruption adaptation.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+            
+            <div class="space-y-3 p-4">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-red-500/10 text-red-600 flex items-center justify-center">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+              </div>
+              <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">100% Price Transparency</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">No surprise convenience fees or hidden baggage charges at final checkout.</p>
+            </div>
+
+            <div class="space-y-3 p-4">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <i data-lucide="users" class="w-6 h-6"></i>
+              </div>
+              <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">517 Verified Operators</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Directly connected with certified local ground tour operators across 802 districts.</p>
+            </div>
+
+            <div class="space-y-3 p-4">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                <i data-lucide="zap" class="w-6 h-6"></i>
+              </div>
+              <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">Autonomous Adaptation</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Instant alternative itinerary re-routing when flights delay or roads close.</p>
+            </div>
+
+            <div class="space-y-3 p-4">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+                <i data-lucide="headset" class="w-6 h-6"></i>
+              </div>
+              <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">24/7 Dedicated Support</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Round-the-clock priority customer hotline (+91 124 4180810) and operator dispatch.</p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           DOWNLOAD TRAVORA MOBILE APP (FEATURING HIGH-RES SMARTPHONE MOCKUP)
+           =================================================================== -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="rounded-3xl p-8 sm:p-12 bg-gradient-to-r from-[#880808] via-[#ea2330] to-[#260406] text-white shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-8">
+          
+          <!-- Subtle Glow Graphic -->
+          <div class="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+
+          <!-- Left Description -->
+          <div class="space-y-4 text-left max-w-xl relative z-10">
+            <span class="px-3 py-1 rounded-full bg-black/30 text-amber-300 font-black text-xs uppercase tracking-wider border border-white/20 inline-block">
+              MOBILE APP EXCLUSIVE DEALS
+            </span>
+            <h2 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+              Get Up to ₹1,500 OFF on Your First App Booking
+            </h2>
+            <p class="text-xs sm:text-sm text-red-100 leading-relaxed">
+              Download the TRAVORA mobile app for real-time flight radar tracking, live WhatsApp notifications, and exclusive flash sales.
+            </p>
+
+            <div class="grid grid-cols-2 gap-3 pt-2 text-xs font-semibold text-white/90">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span>Live Flight Radar & Gate Alerts</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span>Offline E-Tickets & Boarding Pass</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span>Autonomous Reschedule in 1-Click</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span>4.9 ★ Rating (1.2M Reviews)</span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button 
+                type="button"
+                onclick="window.startPlanningFor('Goa')" 
+                class="px-8 py-4 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-extrabold text-sm shadow-xl transition transform hover:-translate-y-0.5 flex items-center space-x-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-red-600"></i>
+                <span>Book Trip on Web</span>
+              </button>
+              <button 
+                type="button"
+                onclick="window.copyPromoCode('FIRSTFLY')" 
+                class="px-6 py-4 rounded-2xl bg-black/40 hover:bg-black/60 text-white font-bold text-sm border border-white/20 transition flex items-center space-x-2">
+                <i data-lucide="tag" class="w-4 h-4 text-amber-300"></i>
+                <span>Use Code FIRSTFLY</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Smartphone App Render Photo -->
+          <div class="relative z-10 shrink-0 w-64 sm:w-72 lg:w-80">
+            <div class="rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 bg-slate-950 transform hover:scale-105 transition duration-500">
+              <img 
+                src="/static/assets/app/travora_app_preview.jpg" 
+                alt="TRAVORA Luxury Travel Mobile App Screen" 
+                class="w-full h-auto object-cover"
+              />
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  `;
+}
+
+// Interactive helper functions for Yatra + Travora
+window.setLandingSearchTab = function (tab) {
+  window.landingSearchTab = tab;
+  store.setState({ landingSearchTab: tab });
+  const el = document.getElementById('search-results-section');
+  if (el && tab === 'flights') {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+window.setLandingFlightTripType = function (type) {
+  window.landingFlightTripType = type;
+  store.setState({ landingFlightTripType: type });
+};
+
+window.setLandingSpecialFare = function (fare) {
+  window.landingSpecialFare = fare;
+  store.setState({ landingSpecialFare: fare });
+  store.addToast(`Special Fare applied: ${fare.toUpperCase()}`, 'info');
+};
+
+window.swapLandingCities = function () {
+  const fromInput = document.getElementById('search-from-city');
+  const toInput = document.getElementById('search-to-city');
+  if (fromInput && toInput) {
+    const temp = fromInput.value;
+    fromInput.value = toInput.value;
+    toInput.value = temp;
+    window.landingFromCity = fromInput.value;
+    window.landingToCity = toInput.value;
+    store.addToast(`Swapped origin & destination: ${fromInput.value} ⇄ ${toInput.value}`, 'info');
+    store.setState({});
+  }
+};
+
+window.setQuickDestination = function (cityFull) {
+  const toInput = document.getElementById('search-to-city');
+  if (toInput) toInput.value = cityFull;
+  window.landingToCity = cityFull;
+  store.addToast(`Destination set to ${cityFull}`, 'success');
+  store.setState({});
+};
+
+window.selectDestinationCard = function (destName, cityFull) {
+  window.setQuickDestination(cityFull);
+  window.executeLandingSearch('flights');
+};
+
+window.selectPopularRoute = function (fromCity, toCity) {
+  window.landingFromCity = fromCity;
+  window.landingToCity = toCity;
+  window.landingSearchTab = 'flights';
+  window.landingIsSearchActive = true;
+  store.setState({ 
+    landingSearchTab: 'flights',
+    landingIsSearchActive: true
+  });
+  store.addToast(`Loaded cheapest flights for ${fromCity} ➔ ${toCity}`, 'success');
+  setTimeout(() => {
+    const el = document.getElementById('search-results-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
+};
+
+window.toggleLandingFlexibleDates = function (checked) {
+  window.landingFlexibleDates = checked;
+  store.setState({ landingFlexibleDates: checked });
+  store.addToast(checked ? 'Flexible Dates Matrix enabled' : 'Switched to exact date mode', 'info');
+};
+
+window.toggleDirectFlights = function (checked) {
+  window.landingDirectOnly = checked;
+  store.setState({ landingDirectOnly: checked });
+  store.addToast(checked ? 'Showing non-stop flights only' : 'Showing all flights', 'info');
+};
+
+window.toggleTravellerDropdown = function () {
+  window.isTravellerDropdownOpen = !window.isTravellerDropdownOpen;
+  store.setState({});
+};
+
+window.changeAdults = function (delta) {
+  const current = typeof window.landingAdults === 'number' ? window.landingAdults : 1;
+  window.landingAdults = Math.max(1, Math.min(9, current + delta));
+  store.setState({});
+};
+
+window.changeChildren = function (delta) {
+  const current = typeof window.landingChildren === 'number' ? window.landingChildren : 0;
+  window.landingChildren = Math.max(0, Math.min(6, current + delta));
+  store.setState({});
+};
+
+window.changeInfants = function (delta) {
+  const current = typeof window.landingInfants === 'number' ? window.landingInfants : 0;
+  window.landingInfants = Math.max(0, Math.min(4, current + delta));
+  store.setState({});
+};
+
+window.setCabinClass = function (cls) {
+  window.landingCabinClass = cls;
+  store.setState({});
+};
+
+window.executeLandingSearch = function (category) {
+  const fromCity = document.getElementById('search-from-city') ? document.getElementById('search-from-city').value : 'New Delhi (DEL)';
+  const toCity = document.getElementById('search-to-city') ? document.getElementById('search-to-city').value : 'Goa (GOI / GOX)';
+  
+  window.landingIsSearchActive = true;
+  window.landingResultsCategory = category || 'flights';
+  window.landingFromCity = fromCity;
+  window.landingToCity = toCity;
+
+  store.addToast(`Found 5 live deals from ${fromCity} to ${toCity}`, 'success');
+  store.setState({
+    landingIsSearchActive: true,
+    landingResultsCategory: category
+  });
+
+  setTimeout(() => {
+    const el = document.getElementById('search-results-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
+};
+
+window.selectDateFare = function (date, fare) {
+  store.addToast(`Selected date ${date} with fare ₹${fare.toLocaleString('en-IN')}`, 'info');
+};
+
+window.sortFlightsByDuration = function () {
+  store.addToast('Sorted by fastest flight duration (2h 10m)', 'info');
+};
+
+window.bookFlightDirectly = function (flightCode, airline, price, depTime, arrTime) {
+  store.addToast(`Selected ${airline} (${flightCode}). Opening booking & itinerary summary...`, 'success');
+  
+  // Set up store state for booking modal
+  store.setState({
+    isBookingModalOpen: true,
+    bookingDetails: {
+      title: `${airline} Flight ${flightCode}`,
+      category: 'flight',
+      price: price,
+      depTime: depTime,
+      arrTime: arrTime,
+      route: `${window.landingFromCity || 'New Delhi (DEL)'} to ${window.landingToCity || 'Goa (GOI / GOX)'}`,
+      convenienceFee: 0
+    }
+  });
+};
+
+window.trackFlightPrices = function () {
+  store.addToast('Price Alert activated! You will receive instant notifications when fares drop.', 'success');
+};
+
+window.copyPromoCode = function (code) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(() => {
+      store.addToast(`Coupon code ${code} copied to clipboard!`, 'success');
+    }).catch(() => {
+      store.addToast(`Coupon code: ${code}`, 'info');
+    });
+  } else {
+    store.addToast(`Coupon code: ${code}`, 'info');
+  }
+};
+
+window.startPlanningFor = function (destName) {
+  store.addToast(`Customizing tour package for ${destName}...`, 'info');
+  window.navigateView('planner');
+};
+
+window.scrollToOffersSection = function () {
+  const el = document.getElementById('yatra-offers-section');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+};
+

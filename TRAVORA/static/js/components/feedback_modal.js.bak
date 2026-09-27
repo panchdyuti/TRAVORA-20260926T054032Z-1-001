@@ -1,0 +1,280 @@
+import { store } from '../store.js';
+import { api } from '../api.js';
+
+export function renderFeedbackModal() {
+  const state = store.getState();
+  const isOpen = state.isFeedbackModalOpen;
+  if (!isOpen) return '';
+
+  const mode = state.feedbackModalMode || 'platform'; // 'platform' or 'operator'
+  const tour = state.currentTour;
+  const isTripCompleted = tour && (tour.status === 'completed' || tour.is_completed);
+
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+      <div class="surface-card rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-6 modal-content">
+        
+        <!-- HEADER -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+              <i data-lucide="${mode === 'platform' ? 'sparkles' : 'building-2'}" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-base text-slate-900 dark:text-white">
+                ${mode === 'platform' ? 'TRAVORA Platform Feedback' : 'Certified Tour Operator Review'}
+              </h3>
+              <p class="text-[11px] text-slate-400">
+                ${mode === 'platform' ? 'Help refine recommendation intelligence & UI experience' : 'Verified post-trip performance evaluation'}
+              </p>
+            </div>
+          </div>
+          <button onclick="window.closeFeedbackModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- MODE TOGGLE -->
+        <div class="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-900 text-xs font-bold">
+          <button 
+            type="button" 
+            onclick="window.setFeedbackModalMode('platform')"
+            class="py-2 rounded-xl transition ${mode === 'platform' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+            Platform Experience
+          </button>
+          <button 
+            type="button" 
+            onclick="window.setFeedbackModalMode('operator')"
+            class="py-2 rounded-xl transition ${mode === 'operator' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+            Operator Performance
+          </button>
+        </div>
+
+        ${mode === 'platform' ? }`
+          <!-- A. PLATFORM FEEDBACK FORM -->
+          <form onsubmit="window.handlePlatformFeedbackSubmit(event)" class="space-y-4 text-xs">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Application & Flow Experience</span>
+                <select name="app_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <option value="5">5 / 5 — Outstanding</option>
+                  <option value="4" selected>4 / 5 — Good</option>
+                  <option value="3">3 / 5 — Average</option>
+                  <option value="2">2 / 5 — Fair</option>
+                  <option value="1">1 / 5 — Poor</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Booking & Checkout Flow</span>
+                <select name="booking_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <option value="5" selected>5 / 5 — Seamless</option>
+                  <option value="4">4 / 5 — Good</option>
+                  <option value="3">3 / 5 — Average</option>
+                  <option value="2">2 / 5 — Needs Work</option>
+                  <option value="1">1 / 5 — Failed</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300">UI / Design & Visual Clarity</span>
+                <select name="ui_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <option value="5" selected>5 / 5 — Premium & Clear</option>
+                  <option value="4">4 / 5 — Modern</option>
+                  <option value="3">3 / 5 — Adequate</option>
+                  <option value="2">2 / 5 — Cluttered</option>
+                  <option value="1">1 / 5 — Poor</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Recommendation Accuracy</span>
+                <select name="recommendation_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <option value="5" selected>5 / 5 — Spot On</option>
+                  <option value="4">4 / 5 — Relevant</option>
+                  <option value="3">3 / 5 — Moderate</option>
+                  <option value="2">2 / 5 — Mismatched</option>
+                  <option value="1">1 / 5 — Inaccurate</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Payment Verification Security</span>
+                <select name="payment_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <option value="5" selected>5 / 5 — Instant & Trustworthy</option>
+                  <option value="4">4 / 5 — Smooth</option>
+                  <option value="3">3 / 5 — Acceptable</option>
+                  <option value="2">2 / 5 — Slow</option>
+                  <option value="1">1 / 5 — Error Prone</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Qualitative Feedback & Suggestions</label>
+              <textarea name="comments" rows="3" placeholder="Tell us what you liked or how we can make travel planning even smoother..." class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"></textarea>
+            </div>
+
+            <button type="submit" class="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition flex items-center justify-center space-x-1.5 shadow-md">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Submit Platform Feedback</span>
+            </button>
+          </form>
+        ` : }`
+          <!-- B. OPERATOR FEEDBACK FORM -->
+          ${!isTripCompleted ? `
+            <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs space-y-2">
+              <div class="font-bold flex items-center space-x-1.5">
+                <i data-lucide="lock" class="w-4 h-4 text-amber-500"></i>
+                <span>Operator Feedback Locked Until Trip Completion</span>
+              </div>
+              <p class="text-[11px] leading-relaxed">
+                As per TRAVORA operational integrity rules, verified reviews for operator <strong>${tour ? (tour.operator_name || 'Assigned Operator') : 'Partner'}</strong> only unlock once the travel dates conclude and the journey is marked completed.
+              </p>
+              <button 
+                type="button" 
+                onclick="window.markCurrentTourCompleted()"
+                class="mt-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] transition">
+                Simulate Trip Completion (Demo Unlock)
+              </button>
+            </div>
+          }` : `
+            <form onsubmit="window.handleOperatorReviewSubmit(event)" class="space-y-4 text-xs">
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px]">
+                Reviewing Operator: <strong>${tour ? (tour.operator_name || tour.operator_company || 'Aarav Mehta') : 'Local Partner'}</strong>
+                <div class="text-slate-400">Tour #${tour ? tour.code : 'TR1024'} - Status: Completed</div>
+              </div>
+
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700 dark:text-slate-300">Communication & Responsiveness</span>
+                  <select name="comm_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                    <option value="5" selected>5 / 5 — Instant & Clear</option>
+                    <option value="4">4 / 5 — Good</option>
+                    <option value="3">3 / 5 — Satisfactory</option>
+                  </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700 dark:text-slate-300">Transit & Fleet Coordination</span>
+                  <select name="transport_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                    <option value="5" selected>5 / 5 — Punctual & Clean</option>
+                    <option value="4">4 / 5 — Good</option>
+                    <option value="3">3 / 5 — Satisfactory</option>
+                  </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700 dark:text-slate-300">Accommodation Coordination</span>
+                  <select name="hotel_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                    <option value="5" selected>5 / 5 — Smooth Check-in</option>
+                    <option value="4">4 / 5 — Good</option>
+                    <option value="3">3 / 5 — Satisfactory</option>
+                  </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700 dark:text-slate-300">Dynamic Itinerary Management</span>
+                  <select name="itinerary_rating" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                    <option value="5" selected>5 / 5 — Handled Flexibly</option>
+                    <option value="4">4 / 5 — Good</option>
+                    <option value="3">3 / 5 — Satisfactory</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Operator Feedback Notes</label>
+                <textarea name="operator_comment" rows="3" placeholder="Describe how the operator guided and coordinated your on-ground travel..." class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"></textarea>
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition flex items-center justify-center space-x-1.5 shadow-md">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Submit Verified Operator Review</span>
+              </button>
+            </form>
+          `}
+        `}
+
+      </div>
+    </div>
+  `;
+}
+
+window.openFeedbackModal = function(mode = 'platform') {
+  store.setState({ isFeedbackModalOpen: true, feedbackModalMode: mode });
+};
+
+window.closeFeedbackModal = function() {
+  store.setState({ isFeedbackModalOpen: false });
+};
+
+window.setFeedbackModalMode = function(mode) {
+  store.setState({ feedbackModalMode: mode });
+};
+
+window.markCurrentTourCompleted = function() {
+  const tour = store.getState().currentTour;
+  if (tour) {
+    tour.status = 'completed';
+    tour.is_completed = true;
+    store.setState({ currentTour: { ...tour } });
+    store.addToast('Trip marked completed. Post-trip Operator Feedback is now unlocked.', 'success');
+  }
+};
+
+window.handlePlatformFeedbackSubmit = async function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+
+  const payload = {
+    app_experience_rating: parseInt(formData.get('app_rating') || '5'),
+    booking_experience_rating: parseInt(formData.get('booking_rating') || '5'),
+    ui_rating: parseInt(formData.get('ui_rating') || '5'),
+    recommendation_quality_rating: parseInt(formData.get('recommendation_rating') || '5'),
+    payment_experience_rating: parseInt(formData.get('payment_rating') || '5'),
+    comments: formData.get('comments') || '',
+    user_id: store.getState().user ? store.getState().user.id : 1
+  };
+
+  try {
+    store.addToast('Submitting platform feedback...', 'info');
+    await api.submitPlatformFeedback(payload);
+    window.closeFeedbackModal();
+    store.addToast('Thank you! Platform feedback received and stored.', 'success');
+  } catch (err) {
+    console.error(err);
+    store.addToast('Error submitting feedback: ' + err.message, 'critical');
+  }
+};
+
+window.handleOperatorReviewSubmit = async function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  const state = store.getState();
+  const tour = state.currentTour;
+
+  const payload = {
+    tour_id: tour ? tour.id : 1,
+    operator_id: tour ? (tour.operator_id || 1) : 1,
+    user_id: state.user ? state.user.id : 1,
+    rating_overall: 5,
+    rating_communication: parseInt(formData.get('comm_rating') || '5'),
+    rating_transport: parseInt(formData.get('transport_rating') || '5'),
+    rating_accommodation: parseInt(formData.get('hotel_rating') || '5'),
+    rating_itinerary: parseInt(formData.get('itinerary_rating') || '5'),
+    comment: formData.get('operator_comment') || ''
+  };
+
+  try {
+    store.addToast('Submitting operator review...', 'info');
+    await api.submitOperatorReview(payload);
+    window.closeFeedbackModal();
+    store.addToast('Verified operator review submitted to booking record.', 'success');
+  } catch (err) {
+    console.error(err);
+    store.addToast('Error submitting operator review: ' + err.message, 'critical');
+  }
+};

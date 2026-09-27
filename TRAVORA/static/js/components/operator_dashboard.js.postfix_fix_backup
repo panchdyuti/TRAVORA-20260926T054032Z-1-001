@@ -1,0 +1,518 @@
+import { store } from '../store.js';
+import { api } from '../api.js';
+
+export function renderOperatorDashboard() {
+  const state = store.getState();
+  const user = state.user || { id: 1, name: 'Aarav Mehta', role: 'operator', company_name: 'Goa Coastal Expeditions' };
+  const operatorData = state.operatorData || {
+    operator_profile: {
+      id: user.id || 1,
+      name: user.name || "Aarav Mehta",
+      company_name: user.company_name || "Goa Coastal Expeditions & Watersports",
+      rating: 4.9,
+      fleet_size: "14 Speedboats & Jet Skis, 8 AC Vans",
+      response_time_minutes: 4,
+      is_isolated_view: true
+    },
+    kpis: {
+      active_tours: 4,
+      today_checkins: 2,
+      pending_changes: 1,
+      alerts: 1,
+      revenue: "Rs 1,45,000",
+      resolution_time: "4 min",
+      success_rate: "99%"
+    },
+    active_tours: [
+      { id: 1, code: "TR1024", customer_name: "Krishna Singh", destination: "Goa", dates: "09-12 to 09-15", coordinator: "Aarav Mehta", status: "attention", travelers: 2, cost: 20500 },
+      { id: 2, code: "TR1029", customer_name: "Sneha Reddy", destination: "Goa", dates: "09-18 to 09-22", coordinator: "Aarav Mehta", status: "active", travelers: 4, cost: 48000 }
+    ]
+  };
+
+  const kpis = operatorData.kpis || {};
+  const tours = operatorData.active_tours || [];
+  const operatorPackages = state.operatorPackages || [];
+  const placeRequests = state.operatorPlaceRequests || [];
+  const activeTab = state.operatorActiveTab || 'roster'; // 'roster', 'packages', 'requests'
+
+  return `
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      
+      <!-- TOP OPERATIONS HEADER -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              OPERATOR COMMAND HUB
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Isolated Operator Profile: #${operatorData.operator_profile ? operatorData.operator_profile.id : 1}</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+            ${operatorData.operator_profile ? operatorData.operator_profile.company_name : 'Tour Operator Dispatch'}
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Operator Lead: <strong>${operatorData.operator_profile ? operatorData.operator_profile.name : 'Aarav Mehta'}</strong> - Rating: 4.9 - Fleet: ${operatorData.operator_profile ? operatorData.operator_profile.fleet_size : '12 Vehicles'}
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button 
+            type="button"
+            onclick="window.openNewPackageModal()" 
+            class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center space-x-1.5">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Create New Package</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- CRITICAL OPERATOR ALERT: CONTACT TRAVELLER (Prompt Requirement 5) -->
+      ${(state.urgentTravellerIssue || (state.notifications || []).find(n => n.role === 'operator' && !n.is_read && n.message && n.message.toLowerCase().includes('contact traveller'))) ? }`
+        <div class="p-5 rounded-3xl bg-red-500/10 border-2 border-red-500 shadow-xl space-y-3">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-start sm:items-center space-x-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-red-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-red-500/40">
+                <i data-lucide="phone-call" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-red-600 text-white tracking-wider">
+                    CRITICAL DISRUPTION ALERT
+                  </span>
+                  <span class="text-xs font-bold text-red-600 dark:text-red-400">
+                    CONTACT TRAVELLER IMMEDIATELY
+                  </span>
+                </div>
+                <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                  ${(state.urgentTravellerIssue && state.urgentTravellerIssue.customer_name) ? `Traveller ${state.urgentTravellerIssue.customer_name} (Tour #${state.urgentTravellerIssue.tour_code || 'TR1024'}) reported an issue}` : 'Traveller On-Ground Disruption Alert'}
+                </h3>
+                <p class="text-xs text-slate-600 dark:text-slate-300">
+                  ${(state.urgentTravellerIssue && state.urgentTravellerIssue.message) ? state.urgentTravellerIssue.message : 'Contact traveller: he/she has an issue. Immediate phone assistance required.'}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <a 
+                href="tel:${(state.urgentTravellerIssue && state.urgentTravellerIssue.phone) || '+919876543210'}" 
+                class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs shadow-md transition flex items-center space-x-1.5">
+                <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                <span>Call Traveller (${(state.urgentTravellerIssue && state.urgentTravellerIssue.phone) || '+91 98765 43210'})</span>
+              </a>
+              <button 
+                type="button" 
+                onclick="window.markTravellerContacted()" 
+                class="px-4 py-2.5 rounded-xl surface-card hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 transition flex items-center space-x-1">
+                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i>
+                <span>Mark Contacted</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- KPI METRIC CARDS -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <div class="surface-card p-5 rounded-2xl space-y-1">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+            <span>My Active Tours</span>
+            <i data-lucide="compass" class="w-4 h-4 text-teal-500"></i>
+          </div>
+          <div class="text-2xl font-black text-slate-900 dark:text-white">${kpis.active_tours || tours.length}</div>
+          <div class="text-[10px] text-emerald-500 font-medium">Isolated Operator Scope</div>
+        </div>
+
+        <div class="surface-card p-5 rounded-2xl space-y-1">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+            <span>Today's Check-ins</span>
+            <i data-lucide="hotel" class="w-4 h-4 text-indigo-500"></i>
+          </div>
+          <div class="text-2xl font-black text-slate-900 dark:text-white">${kpis.today_checkins || 2}</div>
+          <div class="text-[10px] text-slate-400">Coordinated with hotel front desks</div>
+        </div>
+
+        <div class="surface-card p-5 rounded-2xl space-y-1">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+            <span>Place Requests</span>
+            <i data-lucide="map-pin" class="w-4 h-4 text-amber-500"></i>
+          </div>
+          <div class="text-2xl font-black text-amber-600 dark:text-amber-400">${placeRequests.filter(r => r.status === 'Pending').length}</div>
+          <div class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Awaiting Impact Approval</div>
+        </div>
+
+        <div class="surface-card p-5 rounded-2xl space-y-1">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+            <span>Published Packages</span>
+            <i data-lucide="package" class="w-4 h-4 text-blue-500"></i>
+          </div>
+          <div class="text-2xl font-black text-slate-900 dark:text-white">${operatorPackages.length}</div>
+          <div class="text-[10px] text-slate-400">Standard, Group & Festival</div>
+        </div>
+
+        <div class="surface-card p-5 rounded-2xl space-y-1 col-span-2 lg:col-span-1">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+            <span>My Tour Revenue</span>
+            <i data-lucide="credit-card" class="w-4 h-4 text-emerald-500"></i>
+          </div>
+          <div class="text-2xl font-black text-slate-900 dark:text-white">${kpis.revenue || 'Rs 1,45,000'}</div>
+          <div class="text-[10px] text-emerald-500 font-medium">${kpis.success_rate || '99%'} success rate</div>
+        </div>
+
+      </div>
+
+      <!-- OPERATOR WORKSPACE TABS -->
+      <div class="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <button 
+          onclick="window.setOperatorActiveTab('roster')"
+          class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${activeTab === 'roster' ? 'bg-amber-600 text-white shadow-sm' : 'surface-card text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+          Live Fleet Roster & Tours
+        </button>
+        <button 
+          onclick="window.setOperatorActiveTab('packages')"
+          class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${activeTab === 'packages' ? 'bg-amber-600 text-white shadow-sm' : 'surface-card text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+          My Package Builder (${operatorPackages.length})
+        </button>
+        <button 
+          onclick="window.setOperatorActiveTab('requests')"
+          class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${activeTab === 'requests' ? 'bg-amber-600 text-white shadow-sm' : 'surface-card text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+          Traveller Place Requests (${placeRequests.filter(r => r.status === 'Pending').length})
+        </button>
+      </div>
+
+      <!-- TAB 1: FLEET TOUR ROSTER -->
+      ${activeTab === 'roster' ? }`
+        <div class="surface-card rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-900 dark:text-white">
+                Assigned Traveller Tour Roster
+              </h2>
+              <p class="text-xs text-slate-400">
+                Direct traveller itineraries assigned to your fleet dispatch.
+              </p>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                  <th class="py-3 px-3">Tour ID</th>
+                  <th class="py-3 px-3">Traveler</th>
+                  <th class="py-3 px-3">Destination</th>
+                  <th class="py-3 px-3">Dates</th>
+                  <th class="py-3 px-3">Coordinator</th>
+                  <th class="py-3 px-3">Value</th>
+                  <th class="py-3 px-3">Status</th>
+                  <th class="py-3 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                ${tours.map(t => `
+                  <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                    <td class="py-3 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">
+                      #${t.code}
+                    </td>
+                    <td class="py-3 px-3">
+                      <div class="font-bold text-slate-800 dark:text-slate-200">${t.customer_name}</div>
+                      <div class="text-[10px] text-slate-400">${t.travelers} Guests</div>
+                    </td>
+                    <td class="py-3 px-3 font-semibold text-slate-700 dark:text-slate-300">
+                      ${t.destination}
+                    </td>
+                    <td class="py-3 px-3 text-slate-500 font-mono">
+                      ${t.dates}
+                    </td>
+                    <td class="py-3 px-3 font-medium text-slate-600 dark:text-slate-300">
+                      ${t.coordinator}
+                    </td>
+                    <td class="py-3 px-3 font-bold text-slate-900 dark:text-white">
+                      Rs ${t.cost.toLocaleString('en-IN')}
+                    </td>
+                    <td class="py-3 px-3">
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${t.status === 'attention' ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'}">
+                        ${t.status === 'attention' ? 'Attention Required' : 'Active'}
+                      </span>
+                    </td>
+                    <td class="py-3 px-3 text-right space-x-1.5">
+                      <button 
+                        type="button"
+                        onclick="window.inspectTourDetail(${t.id})" 
+                        class="px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-600 hover:text-white text-teal-600 dark:text-teal-400 font-bold transition border border-teal-200 dark:border-teal-800 text-[11px]">
+                        Inspect
+                      </button>
+                    </td>
+                  </tr>
+                }`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- TAB 2: OPERATOR PACKAGE BUILDER -->
+      ${activeTab === 'packages' ? }`
+        <div class="surface-card rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-900 dark:text-white">
+                My Tour Packages (Standard, Festival & Group)
+              </h2>
+              <p class="text-xs text-slate-400">
+                Create and manage custom packages with transparent seat capacities and fixed pricing.
+              </p>
+            </div>
+            <button 
+              type="button" 
+              onclick="window.openNewPackageModal()"
+              class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-sm transition flex items-center space-x-1.5">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Add Package</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${operatorPackages.map(pkg => `
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3 flex flex-col justify-between shadow-sm">
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${pkg.is_festival_package ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-teal-500/20 text-teal-700 dark:text-teal-300'}">
+                      ${pkg.package_type}
+                    </span>
+                    <span class="text-xs font-extrabold text-slate-900 dark:text-white">Rs ${(pkg.price_per_person || 0).toLocaleString('en-IN')} / person</span>
+                  </div>
+                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">${pkg.title}</h4>
+                  <div class="text-[11px] text-slate-400">${pkg.destination_name} - ${pkg.duration_days} Days</div>
+                  <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">${pkg.description}</p>
+                </div>
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] flex justify-between items-center text-slate-400">
+                  <span>Capacity: ${pkg.available_seats || pkg.capacity} Seats</span>
+                  <button 
+                    type="button" 
+                    onclick="window.deleteOperatorPackage(${pkg.id})"
+                    class="text-red-500 hover:underline font-bold text-[10px]">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            }`).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- TAB 3: ADDITIONAL PLACE REQUESTS -->
+      ${activeTab === 'requests' ? }`
+        <div class="surface-card rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-900 dark:text-white">
+                Traveller Additional Place Modification Requests
+              </h2>
+              <p class="text-xs text-slate-400">
+                Review, approve, or deny requested destinations with computed impact analysis.
+              </p>
+            </div>
+          </div>
+
+          ${placeRequests.length === 0 ? `
+            <div class="text-center py-10 text-xs text-slate-400">
+              No pending place requests from travellers.
+            </div>
+          }` : `
+            <div class="space-y-3">
+              ${placeRequests.map(req => }`
+                <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                        <span>Requested Spot: ${req.place_name}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${req.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-amber-500/20 text-amber-600'}">
+                          ${req.status}
+                        </span>
+                      </div>
+                      <div class="text-xs text-slate-400 mt-0.5">Tour #${req.tour_code || 'TR1024'} - Target Day ${req.day_number}</div>
+                    </div>
+                    <div class="text-right">
+                      <div class="font-black text-sm text-teal-600 dark:text-teal-400">+Rs ${(req.estimated_price_delta || 2000).toLocaleString('en-IN')}</div>
+                      <div class="text-[10px] text-slate-400">+${req.travel_time_hours || 3.0} hrs - ~${req.distance_km || 28} km</div>
+                    </div>
+                  </div>
+
+                  <div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl">
+                    ${req.notes ? `Traveller Notes: "${req.notes}"}` : 'Standard traveler additional landmark request.'}
+                  </div>
+
+                  ${req.status === 'Pending' ? `
+                    <div class="flex items-center space-x-2 pt-1">
+                      <button 
+                        type="button" 
+                        onclick="window.actionPlaceRequest(${req.id}, 'Approved')"
+                        class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition">
+                        Approve & Sync Itinerary
+                      </button>
+                      <button 
+                        type="button" 
+                        onclick="window.actionPlaceRequest(${req.id}, 'Denied')"
+                        class="px-4 py-1.5 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-bold text-xs transition">
+                        Deny
+                      </button>
+                    </div>
+                  }` : ''}
+                </div>
+              `).join('')}
+            </div>
+          }`}
+        </div>
+      ` : ''}
+
+      <!-- MODAL: OPERATOR PACKAGE BUILDER -->
+      <div id="new-package-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="surface-card rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 modal-content">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="package" class="w-5 h-5 text-amber-500"></i>
+              <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Create Operator Tour Package</h3>
+            </div>
+            <button onclick="window.closeNewPackageModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="window.submitCreateOperatorPackage(event)" class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Package Title</label>
+              <input type="text" name="title" required placeholder="e.g. 4-Day Coastal Goa Scuba & Heritage Special" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Destination</label>
+                <input type="text" name="destination_name" required value="Goa" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Package Type</label>
+                <select name="package_type" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <option value="private">Private Bespoke Package</option>
+                  <option value="group">Group Package</option>
+                  <option value="festival">Festival Special Package</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Duration (Days)</label>
+                <input type="number" name="duration_days" required value="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Price / Person (INR)</label>
+                <input type="number" name="price_per_person" required value="18500" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Capacity (Seats)</label>
+                <input type="number" name="capacity" required value="12" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Package Description & Inclusions</label>
+              <textarea name="description" rows="2" placeholder="Detail the vehicles, hotel tiers, and activities included..." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"></textarea>
+            </div>
+
+            <div class="pt-2">
+              <button type="submit" class="w-full py-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition">
+                Publish Package to Traveller Discovery
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+window.setOperatorActiveTab = async function(tab) {
+  store.setState({ operatorActiveTab: tab });
+  const user = store.getState().user;
+  const operatorId = user ? user.id : 1;
+
+  if (tab === 'packages') {
+    const pkgs = await api.getMyPackages(operatorId).catch(() => []);
+    store.setState({ operatorPackages: pkgs });
+  } else if (tab === 'requests') {
+    const reqs = await api.getOperatorPlaceRequests(operatorId).catch(() => []);
+    store.setState({ operatorPlaceRequests: reqs });
+  }
+};
+
+window.openNewPackageModal = function() {
+  const modal = document.getElementById('new-package-modal');
+  if (modal) modal.classList.remove('hidden');
+};
+
+window.closeNewPackageModal = function() {
+  const modal = document.getElementById('new-package-modal');
+  if (modal) modal.classList.add('hidden');
+};
+
+window.submitCreateOperatorPackage = async function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  const user = store.getState().user;
+
+  const payload = {
+    title: formData.get('title'),
+    destination_name: formData.get('destination_name'),
+    package_type: formData.get('package_type'),
+    duration_days: parseInt(formData.get('duration_days') || '3'),
+    price_per_person: parseFloat(formData.get('price_per_person') || '15000'),
+    capacity: parseInt(formData.get('capacity') || '10'),
+    available_seats: parseInt(formData.get('capacity') || '10'),
+    description: formData.get('description') || '',
+    is_festival_package: formData.get('package_type') === 'festival',
+    operator_id: user ? user.id : 1
+  };
+
+  try {
+    store.addToast('Publishing operator package to database...', 'info');
+    await api.createPackage(payload);
+    window.closeNewPackageModal();
+    const pkgs = await api.getMyPackages(user ? user.id : 1).catch(() => []);
+    store.setState({ operatorPackages: pkgs });
+    store.addToast('Package published successfully!', 'success');
+  } catch (err) {
+    console.error(err);
+    store.addToast('Failed to create package: ' + err.message, 'critical');
+  }
+};
+
+window.deleteOperatorPackage = async function(pkgId) {
+  if (!confirm('Are you sure you want to remove this package?')) return;
+  try {
+    await api.deletePackage(pkgId);
+    const user = store.getState().user;
+    const pkgs = await api.getMyPackages(user ? user.id : 1).catch(() => []);
+    store.setState({ operatorPackages: pkgs });
+    store.addToast('Package removed.', 'info');
+  } catch (err) {
+    console.error(err);
+    store.addToast('Delete failed: ' + err.message, 'critical');
+  }
+};
+
+window.actionPlaceRequest = async function(requestId, action) {
+  try {
+    store.addToast(`Processing ${action.toLowerCase()} for place request...`, 'info');
+    await api.actionPlaceRequest(requestId, { action: action });
+    const user = store.getState().user;
+    const reqs = await api.getOperatorPlaceRequests(user ? user.id : 1).catch(() => []);
+    store.setState({ operatorPlaceRequests: reqs });
+    store.addToast(`Place request has been ${action} and traveller notified.`, 'success');
+  } catch (err) {
+    console.error(err);
+    store.addToast('Action failed: ' + err.message, 'critical');
+  }
+};

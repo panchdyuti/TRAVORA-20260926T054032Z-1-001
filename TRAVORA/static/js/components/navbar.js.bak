@@ -1,0 +1,508 @@
+import { store } from '../store.js';
+
+export function renderNavbar() {
+  const state = store.getState();
+  const user = state.user || { name: 'Traveler User', email: 'traveler@travora.demo', role: 'traveler' };
+  const role = user.role || state.activeRole || 'traveler';
+  const isOperator = role === 'operator';
+  const isBusiness = role === 'business_operator';
+  const isAdmin = role === 'admin';
+  const isDark = state.theme === 'dark';
+  const unreadCount = (state.notifications || []).filter(n => !n.is_read).length;
+  const isMobileNavOpen = !!window.isMobileNavOpen;
+
+  // Role badges & styling (verified static indicator, NO role changing dropdown)
+  const roleConfig = {
+    traveler: {
+      label: 'VERIFIED TRAVELLER',
+      color: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30',
+      dot: 'bg-[#ea2330]',
+      icon: 'compass',
+      homeView: 'dashboard'
+    },
+    operator: {
+      label: 'CERTIFIED OPERATOR',
+      color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+      dot: 'bg-amber-500',
+      icon: 'building-2',
+      homeView: 'operator_dash'
+    },
+    business_operator: {
+      label: 'CORPORATE PARTNER',
+      color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+      dot: 'bg-blue-500',
+      icon: 'briefcase',
+      homeView: 'business_operator'
+    },
+    admin: {
+      label: 'ADMINISTRATOR',
+      color: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+      dot: 'bg-purple-500',
+      icon: 'shield-check',
+      homeView: 'admin_dash'
+    }
+  }[role] || {
+    label: 'TRAVELLER',
+    color: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30',
+    dot: 'bg-[#ea2330]',
+    icon: 'compass',
+    homeView: 'dashboard'
+  };
+
+  const userName = user.name || 'User';
+  const userInitials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
+  return `
+    <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl border-b border-slate-200/80 dark:border-slate-800/80 shadow-md transition-all duration-300">
+      
+      <!-- YATRA-STYLE TOP MICRO BAR IN DARK RED -->
+      <div class="hidden md:block bg-[#260406] text-slate-200 text-[11px] py-1 border-b border-[#450a0f]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <span class="text-white font-extrabold uppercase tracking-wider flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#ea2330] inline-block"></span>
+              <span>India's Leading Travel & Tour Platform</span>
+            </span>
+            <span class="opacity-30">|</span>
+            <button onclick="window.navigateView('business_operator')" class="hover:text-white transition flex items-center space-x-1 text-slate-300">
+              <i data-lucide="briefcase" class="w-3 h-3 text-red-300"></i>
+              <span>TRAVORA for Business</span>
+            </button>
+            <span class="opacity-30">|</span>
+            <button onclick="window.navigateView('operator_dash')" class="hover:text-white transition flex items-center space-x-1 text-slate-300">
+              <i data-lucide="building-2" class="w-3 h-3 text-amber-300"></i>
+              <span>Operator Portal</span>
+            </button>
+            <span class="opacity-30">|</span>
+            <span class="text-amber-300 font-bold flex items-center space-x-1">
+              <i data-lucide="crown" class="w-3 h-3"></i>
+              <span>TRAVORA Prime - Zero Convenience Fee</span>
+            </span>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <span class="flex items-center space-x-1 text-slate-300">
+              <i data-lucide="phone-call" class="w-3 h-3 text-[#ea2330]"></i>
+              <span>24x7 Helpline: +91 124 4180810</span>
+            </span>
+            <span class="opacity-30">|</span>
+            <button onclick="window.navigateView('itinerary')" class="hover:text-white transition font-semibold text-white">
+              My Bookings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN HEADER ROW -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-4">
+        
+        <!-- LEFT: LOGO & ROLE VERIFIED BADGE -->
+        <div class="flex items-center space-x-3 shrink-0">
+          <div 
+            onclick="window.navigateView('${roleConfig.homeView}')" 
+            class="flex items-center space-x-3 cursor-pointer group select-none"
+            title="TRAVORA — Home">
+            <img 
+              src="/static/assets/logo/travora_logo_horizontal.png" 
+              alt="TRAVORA" 
+              class="h-8 sm:h-9 w-auto object-contain dark:brightness-110 group-hover:opacity-95 transition"
+            />
+            
+            <span class="hidden xl:inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase border shadow-sm ${roleConfig.color}">
+              <span class="w-1.5 h-1.5 rounded-full ${roleConfig.dot} animate-pulse"></span>
+              <span>${roleConfig.label}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- CENTER: YATRA-STYLE CATEGORY SERVICE TABS -->
+        <nav class="hidden lg:flex items-center space-x-0.5 xl:space-x-1">
+          ${role === 'traveler' ? }`
+            <button 
+              onclick="window.switchYatraServiceTab('flights')" 
+              class="yatra-nav-tab ${(state.currentView === 'landing' && (!window.landingSearchTab || window.landingSearchTab === 'flights')) ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="Search Cheap Domestic & International Flights">
+              <i data-lucide="plane" class="w-5 h-5 text-red-600 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">Flights</span>
+            </button>
+
+            <button 
+              onclick="window.switchYatraServiceTab('hotels')" 
+              class="yatra-nav-tab ${state.currentView === 'landing' && window.landingSearchTab === 'hotels' ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="Book 5-Star Luxury Resorts & Budget Hotels">
+              <i data-lucide="hotel" class="w-5 h-5 text-red-600 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">Hotels</span>
+            </button>
+
+            <button 
+              onclick="window.switchYatraServiceTab('packages')" 
+              class="yatra-nav-tab ${state.currentView === 'landing' && window.landingSearchTab === 'packages' ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="Explore Handcrafted Indian Holiday Packages">
+              <i data-lucide="palmtree" class="w-5 h-5 text-amber-500 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">Holidays</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('planner')" 
+              class="yatra-nav-tab ${state.currentView === 'planner' ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="TRAVORA AI Autonomous Dynamic Tour Planner">
+              <i data-lucide="sparkles" class="w-5 h-5 text-red-600 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">AI Planner</span>
+            </button>
+
+            <button 
+              onclick="window.switchYatraServiceTab('buses_cabs')" 
+              class="yatra-nav-tab ${state.currentView === 'landing' && window.landingSearchTab === 'buses_cabs' ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="Book Intercity Volvo Buses & Outstation Cabs">
+              <i data-lucide="bus" class="w-5 h-5 text-indigo-500 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">Buses & Cabs</span>
+            </button>
+
+            <button 
+              onclick="window.switchYatraServiceTab('trains')" 
+              class="yatra-nav-tab ${state.currentView === 'landing' && window.landingSearchTab === 'trains' ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="Check Train Berths & IRCTC Status">
+              <i data-lucide="train" class="w-5 h-5 text-blue-500 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">Trains</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('dashboard')" 
+              class="yatra-nav-tab ${state.currentView === 'dashboard' ? 'active text-red-600 dark:text-red-400 font-black' : ''}"
+              title="Explore 802 Indian Districts Directory">
+              <i data-lucide="compass" class="w-5 h-5 text-[#880808] dark:text-red-400 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">802 Districts</span>
+            </button>
+
+            <button 
+              onclick="window.scrollToOffersSection ? window.scrollToOffersSection() : window.switchYatraServiceTab('flights')" 
+              class="yatra-nav-tab hover:text-red-600 transition"
+              title="Bank Coupons & Flight Discount Codes">
+              <i data-lucide="tag" class="w-5 h-5 text-amber-500 mb-0.5"></i>
+              <span class="text-[11px] tracking-tight">Offers</span>
+            </button>
+          ` : isAdmin ? }`
+            <!-- ADMIN NAVIGATION -->
+            <button 
+              onclick="window.navigateView('admin_dash')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'admin_dash' ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 text-purple-500"></i>
+              <span>Platform Telemetry</span>
+            </button>
+            <button 
+              onclick="window.refreshAdminData()" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-teal-500"></i>
+              <span>Live Events</span>
+            </button>
+          ` : isOperator ? }`
+            <!-- OPERATOR NAVIGATION -->
+            <button 
+              onclick="window.navigateView('operator_dash')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'operator_dash' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+              <span>Dispatch Hub</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('operator_tour', { tour_id: 1 })" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'operator_tour' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+              <span>Active Tours</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('operator_alerts')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'operator_alerts' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Operations Alerts</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('operator_vendors')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'operator_vendors' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+              <span>Fleet & Vendors</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('operator_analytics')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'operator_analytics' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
+              <span>Analytics</span>
+            </button>
+          ` : isBusiness ? }`
+            <!-- CORPORATE NAVIGATION -->
+            <button 
+              onclick="window.navigateView('business_operator')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'business_operator' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="briefcase" class="w-3.5 h-3.5 text-blue-500"></i>
+              <span>Corporate Delegations</span>
+            </button>
+          }` : `
+            <!-- TRAVELLER NAVIGATION PILLS -->
+            <button 
+              onclick="window.navigateView('dashboard')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'dashboard' ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="home" class="w-3.5 h-3.5"></i>
+              <span>Dashboard</span>
+            </button>
+
+            <!-- EXPLORE 802 DISTRICTS DIRECTORY SHORTCUT -->
+            <button 
+              onclick="window.startExploreDistricts()" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <i data-lucide="compass" class="w-3.5 h-3.5 text-teal-500"></i>
+              <span>Explore 802 Districts</span>
+            </button>
+
+            <!-- PLAN TRIP CTA (HIGHLIGHTED) -->
+            <button 
+              onclick="window.navigateView('planner')" 
+              class="whitespace-nowrap px-4 py-2 rounded-xl text-xs font-extrabold transition flex items-center space-x-1.5 bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 text-white shadow-md shadow-teal-500/20 hover:from-teal-500 hover:to-emerald-400 hover:shadow-lg hover:-translate-y-0.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Plan Journey</span>
+            </button>
+
+            <button 
+              onclick="window.navigateView('itinerary')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'itinerary' ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              <span>My Trips</span>
+            </button>
+
+            <!-- LIVE TRACKER WITH PULSING RADAR -->
+            <button 
+              onclick="window.navigateView('tracker')" 
+              class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'tracker' ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Live Tracker</span>
+            </button>
+          `}
+
+          <button 
+            onclick="window.navigateView('about')" 
+            class="whitespace-nowrap px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${state.currentView === 'about' ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+            <span>About</span>
+          </button>
+        </nav>
+
+        <!-- RIGHT: SEARCH DISTRICTS SHORTCUT, NOTIFICATIONS, THEME, ACCOUNT CAPSULE -->
+        <div class="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
+          
+          <!-- QUICK SEARCH 802 DISTRICTS TRIGGER (FOR INSTANT DISCOVERY) -->
+          <button 
+            onclick="window.startExploreDistricts()"
+            class="hidden md:flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-red-500 bg-slate-50 dark:bg-slate-900/80 text-xs text-slate-600 dark:text-slate-300 transition group"
+            title="Search 802 Indian Districts">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-[#ea2330] group-hover:scale-110 transition"></i>
+            <span class="text-[11px] font-semibold">Search Districts...</span>
+            <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[9px] font-mono font-bold text-slate-500">802</kbd>
+          </button>
+
+          <!-- NOTIFICATIONS BELL -->
+          <div class="relative">
+            <button 
+              id="notif-btn" 
+              onclick="window.toggleNotificationsDropdown()"
+              class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition relative"
+              title="Notifications">
+              <i data-lucide="bell" class="w-4 h-4"></i>
+              ${unreadCount > 0 ? }`
+                <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-900 animate-pulse"></span>
+              ` : ''}
+            </button>
+            
+            <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl surface-card shadow-2xl z-50 p-4 border border-slate-200 dark:border-slate-700">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-sm">Notifications & Alerts</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 font-semibold">${unreadCount} unread</span>
+                </div>
+                <button onclick="window.markAllNotifsRead()" class="text-xs text-[#ea2330] hover:underline font-bold">Mark all read</button>
+              </div>
+              <div class="divide-y divide-slate-100 dark:divide-slate-800/60 max-h-72 overflow-y-auto mt-2">
+                ${(state.notifications || []).length === 0 ? }`
+                  <div class="py-6 text-center text-xs text-slate-400">No operational alerts at this moment</div>
+                ` : state.notifications.map(n => }`
+                  <div class="py-2.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-xl transition ${!n.is_read ? 'bg-teal-50/30 dark:bg-teal-950/20' : ''}">
+                    <div class="flex items-start justify-between">
+                      <p class="text-xs font-semibold ${n.type === 'critical' ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}">${n.title}</p>
+                      <span class="text-[10px] text-slate-400">Just now</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${n.message}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- THEME TOGGLE (SUN / MOON) -->
+          <button 
+            onclick="window.toggleTheme()" 
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition"
+            title="Toggle Light / Dark Mode">
+            <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4 transition transform hover:rotate-45"></i>
+          </button>
+
+          ${state.isAuthenticated ? }`
+            <!-- USER ACCOUNT CAPSULE (TRIGGERS IMPROVED ACCOUNT VIEWING) -->
+            <button 
+              onclick="window.openProfileModal()" 
+              class="flex items-center space-x-2.5 pl-1.5 pr-3 py-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-red-500 transition group text-left shadow-sm"
+              title="View Account Profile, Bookings & Settings">
+              <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#880808] via-[#ea2330] to-white p-[2px] shadow-md shadow-red-500/20 shrink-0">
+                <div class="w-full h-full rounded-[10px] bg-slate-950 text-white flex items-center justify-center text-xs font-black">
+                  ${userInitials}
+                </div>
+              </div>
+              <div class="hidden sm:block text-left">
+                <div class="text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-[110px] leading-tight group-hover:text-[#ea2330] transition">
+                  ${userName.split(' ')[0]}
+                </div>
+                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mt-0.5">
+                  View Account
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#ea2330] transition"></i>
+            </button>
+
+            <!-- SIGN OUT BUTTON -->
+            <button 
+              onclick="window.handleLogout()" 
+              class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 border border-slate-200 dark:border-slate-800 transition shrink-0"
+              title="Sign Out">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          }` : `
+            <!-- SIGN IN BUTTON (TRAVORA BURGUNDY) -->
+            <button 
+              onclick="window.openLoginPopup('login')" 
+              class="px-5 py-2.5 rounded-xl text-white text-xs font-black shadow-md transition flex items-center space-x-1.5 hover:-translate-y-0.5"
+              style="background:linear-gradient(135deg,#810B38,#541A1A);box-shadow:0 4px 14px rgba(129,11,56,0.35);"
+              title="Sign in to your TRAVORA account">
+              <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+              <span>Login / Sign Up</span>
+            </button>
+          `}
+
+          <!-- MOBILE MENU HAMBURGER -->
+          <button 
+            type="button" 
+            onclick="window.toggleMobileNav()" 
+            class="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition">
+            <i data-lucide="${isMobileNavOpen ? 'x' : 'menu'}" class="w-5 h-5"></i>
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- MOBILE RESPONSIVE NAVIGATION DRAWER -->
+      ${isMobileNavOpen ? `
+        <div class="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 px-4 pt-3 pb-5 space-y-2 animate-fadeIn">
+          
+          <div class="flex items-center justify-between pb-2 mb-1 border-b border-slate-100 dark:border-slate-800">
+            <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${roleConfig.color}">
+              <span class="w-1.5 h-1.5 rounded-full ${roleConfig.dot}"></span>
+              <span>${roleConfig.label}</span>
+            </span>
+            <span class="text-xs text-slate-400">${userName}</span>
+          </div>
+
+          <button 
+            onclick="window.navigateView('dashboard'); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2.5 ${state.currentView === 'dashboard' ? 'bg-teal-500/10 text-teal-600' : 'text-slate-700 dark:text-slate-300'}">
+            <i data-lucide="home" class="w-4 h-4 text-teal-500"></i>
+            <span>Dashboard</span>
+          </button>
+
+          <button 
+            onclick="window.startExploreDistricts(); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2.5 text-slate-700 dark:text-slate-300">
+            <i data-lucide="compass" class="w-4 h-4 text-teal-500"></i>
+            <span>Explore 802 Indian Districts</span>
+          </button>
+
+          <button 
+            onclick="window.navigateView('planner'); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-extrabold text-xs flex items-center space-x-2.5 bg-gradient-to-r from-teal-500/15 to-emerald-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30">
+            <i data-lucide="sparkles" class="w-4 h-4 text-teal-500"></i>
+            <span>Plan Journey</span>
+          </button>
+
+          <button 
+            onclick="window.navigateView('itinerary'); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2.5 ${state.currentView === 'itinerary' ? 'bg-teal-500/10 text-teal-600' : 'text-slate-700 dark:text-slate-300'}">
+            <i data-lucide="calendar" class="w-4 h-4 text-teal-500"></i>
+            <span>My Trips</span>
+          </button>
+
+          <button 
+            onclick="window.navigateView('tracker'); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2.5 ${state.currentView === 'tracker' ? 'bg-teal-500/10 text-teal-600' : 'text-slate-700 dark:text-slate-300'}">
+            <i data-lucide="navigation" class="w-4 h-4 text-emerald-500"></i>
+            <span>Live Tracker (Live on Tour)</span>
+          </button>
+
+          <button 
+            onclick="window.openProfileModal(); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2.5 text-slate-700 dark:text-slate-300">
+            <i data-lucide="user" class="w-4 h-4 text-teal-500"></i>
+            <span>My Account & Receipts</span>
+          </button>
+
+          <button 
+            onclick="window.navigateView('about'); window.toggleMobileNav();" 
+            class="w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2.5 text-slate-700 dark:text-slate-300">
+            <i data-lucide="info" class="w-4 h-4 text-teal-500"></i>
+            <span>About TRAVORA</span>
+          </button>
+
+        </div>
+      ` : ''}
+
+    </header>
+  `;
+}
+
+// Global UI Navigation Helpers
+window.toggleMobileNav = function () {
+  window.isMobileNavOpen = !window.isMobileNavOpen;
+  store.setState({});
+};
+
+window.startExploreDistricts = function () {
+  window.navigateView('planner');
+  window.plannerState.isDistrictSelectorOpen = true;
+  if (!window.plannerState.loadedDistrictsList || window.plannerState.loadedDistrictsList.length === 0) {
+    if (window.toggleDistrictSelector) {
+      window.toggleDistrictSelector();
+      return;
+    }
+  }
+  store.setState({});
+  setTimeout(() => {
+    const el = document.getElementById('district-search-input');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus();
+    }
+  }, 120);
+};
+
+window.switchYatraServiceTab = function (tab) {
+  window.landingSearchTab = tab;
+  store.setState({ landingSearchTab: tab });
+  const state = store.getState();
+  if (state.currentView !== 'landing') {
+    window.navigateView('landing');
+  }
+  setTimeout(() => {
+    window.scrollTo({ top: 120, behavior: 'smooth' });
+  }, 100);
+};

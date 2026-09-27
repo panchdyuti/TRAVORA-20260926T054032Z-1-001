@@ -1,0 +1,221 @@
+import { store } from '../store.js';
+import { api } from '../api.js';
+
+export function renderAdminDashboard() {
+  const state = store.getState();
+  const metrics = state.adminMetrics || {
+    users_count: 522,
+    travellers_count: 3,
+    operators_count: 517,
+    business_operators_count: 1,
+    districts_count: 802,
+    destinations_count: 8,
+    hotels_count: 70,
+    packages_count: 6,
+    bookings_count: 3,
+    payments_count: 3,
+    active_trips_count: 2,
+    completed_trips_count: 1,
+    disruptions_count: 1,
+    place_requests_count: 0,
+    reviews_count: 1,
+    platform_feedback_count: 0
+  };
+
+  const events = state.adminEvents || [];
+  const auditLogs = state.adminAuditLogs || [];
+
+  return `
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      
+      <!-- TOP OPERATIONS HEADER -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 uppercase tracking-wider">
+              CENTRAL SYSTEM ADMINISTRATION
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Live DB Stream</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+            TRAVORA Platform Admin Operations
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Real-time live telemetry, 802 India districts, 500+ operators, booking events, and full immutable audit trail.
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button 
+            type="button"
+            onclick="window.refreshAdminData()" 
+            class="px-4 py-2.5 rounded-xl surface-card hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm border border-slate-300 dark:border-slate-700 transition flex items-center space-x-2">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-purple-500"></i>
+            <span>Refresh Real-Time DB State</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- REAL-TIME METRICS GRID -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3.5">
+        
+        <div class="surface-card p-4 rounded-2xl space-y-1 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span class="font-semibold">Total Users</span>
+            <i data-lucide="users" class="w-4 h-4 text-purple-500"></i>
+          </div>
+          <div class="text-xl font-black text-slate-900 dark:text-white">${metrics.users_count}</div>
+          <div class="text-[10px] text-slate-400">${metrics.travellers_count} Travellers - ${metrics.business_operators_count} Corp</div>
+        </div>
+
+        <div class="surface-card p-4 rounded-2xl space-y-1 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span class="font-semibold">Tour Operators</span>
+            <i data-lucide="building-2" class="w-4 h-4 text-amber-500"></i>
+          </div>
+          <div class="text-xl font-black text-amber-600 dark:text-amber-400">${metrics.operators_count}</div>
+          <div class="text-[10px] text-slate-400">500 Synthetic Demo Operators</div>
+        </div>
+
+        <div class="surface-card p-4 rounded-2xl space-y-1 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span class="font-semibold">India Districts</span>
+            <i data-lucide="map" class="w-4 h-4 text-teal-500"></i>
+          </div>
+          <div class="text-xl font-black text-teal-600 dark:text-teal-400">${metrics.districts_count}</div>
+          <div class="text-[10px] text-slate-400">28 States & 8 UTs Mapped</div>
+        </div>
+
+        <div class="surface-card p-4 rounded-2xl space-y-1 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span class="font-semibold">Demonstration Hotels</span>
+            <i data-lucide="hotel" class="w-4 h-4 text-indigo-500"></i>
+          </div>
+          <div class="text-xl font-black text-slate-900 dark:text-white">${metrics.hotels_count}</div>
+          <div class="text-[10px] text-slate-400">52 Synthetic + 10 Star Rated</div>
+        </div>
+
+        <div class="surface-card p-4 rounded-2xl space-y-1 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span class="font-semibold">Live Trips</span>
+            <i data-lucide="compass" class="w-4 h-4 text-emerald-500"></i>
+          </div>
+          <div class="text-xl font-black text-emerald-600 dark:text-emerald-400">${metrics.active_trips_count} Active</div>
+          <div class="text-[10px] text-slate-400">${metrics.completed_trips_count} Completed</div>
+        </div>
+
+        <div class="surface-card p-4 rounded-2xl space-y-1 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span class="font-semibold">Disruptions</span>
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i>
+          </div>
+          <div class="text-xl font-black text-red-600 dark:text-red-400">${metrics.disruptions_count}</div>
+          <div class="text-[10px] text-slate-400">${metrics.place_requests_count} Place Change Reqs</div>
+        </div>
+
+      </div>
+
+      <!-- 2-COLUMN LAYOUT: LIVE SYSTEM EVENT STREAM + AUDIT TRAIL -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- COLUMN 1: LIVE APPLICATION OPERATIONAL EVENT STREAM -->
+        <div class="surface-card rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="activity" class="w-4 h-4 text-teal-500"></i>
+              <h2 class="font-extrabold text-sm text-slate-900 dark:text-white">
+                Live Application Event Stream
+              </h2>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 font-mono font-bold">
+              Real Backend Telemetry
+            </span>
+          </div>
+
+          <div class="space-y-3 max-h-96 overflow-y-auto pr-1">
+            ${events.length === 0 ? }`
+              <div class="text-center py-8 text-xs text-slate-400">No events logged yet</div>
+            ` : events.map(evt => }`
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+                    <span class="w-2 h-2 rounded-full ${evt.event_type.includes('error') || evt.event_type.includes('disruption') ? 'bg-red-500' : 'bg-teal-500'}"></span>
+                    <span>${evt.title}</span>
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-mono">${evt.timestamp ? evt.timestamp.slice(11, 16) : 'Just now'}</span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">${evt.message}</p>
+                <div class="text-[10px] text-slate-400 flex items-center space-x-2 pt-0.5">
+                  <span class="font-mono">User #${evt.user_id || 'System'}</span>
+                  <span>-</span>
+                  <span class="uppercase font-semibold text-teal-600 dark:text-teal-400">${evt.role || 'Platform'}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- COLUMN 2: IMMUTABLE AUDIT TRAIL -->
+        <div class="surface-card rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="shield-check" class="w-4 h-4 text-purple-500"></i>
+              <h2 class="font-extrabold text-sm text-slate-900 dark:text-white">
+                Immutable Change Audit Trail
+              </h2>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 font-mono font-bold">
+              Compliance Archive
+            </span>
+          </div>
+
+          <div class="space-y-3 max-h-96 overflow-y-auto pr-1">
+            ${auditLogs.length === 0 ? }`
+              <div class="text-center py-8 text-xs text-slate-400">No audit records recorded yet</div>
+            ` : auditLogs.map(log => `
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-800 dark:text-slate-200">
+                    ${log.action}
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-mono">${log.timestamp ? log.timestamp.slice(11, 19) : ''}</span>
+                </div>
+                <div class="text-[11px] text-slate-600 dark:text-slate-300">
+                  <span class="font-semibold text-purple-600 dark:text-purple-400">[${log.entity_type} #${log.entity_id}]</span>: ${log.reason || 'Operational status modification'}
+                </div>
+                <div class="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+                  <span>Approved by: <strong>${log.approved_by || 'System Automatic'}</strong></span>
+                  <span class="font-mono text-[9px] text-slate-500">Audit ID #${log.id}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+window.refreshAdminData = async function() {
+  try {
+    store.addToast('Fetching real-time platform metrics and event stream...', 'info');
+    const [metrics, events, auditLogs] = await Promise.all([
+      api.getAdminMetrics().catch(() => null),
+      api.getAdminEvents().catch(() => []),
+      api.getAdminAuditLogs().catch(() => [])
+    ]);
+
+    store.setState({
+      adminMetrics: metrics,
+      adminEvents: events,
+      adminAuditLogs: auditLogs
+    });
+
+    store.addToast('Central Admin telemetry refreshed with live DB state.', 'success');
+  } catch (err) {
+    console.error(err);
+    store.addToast('Admin sync failed: ' + err.message, 'critical');
+  }
+};

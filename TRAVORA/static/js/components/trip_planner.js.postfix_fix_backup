@@ -1,0 +1,1360 @@
+import { store } from '../store.js';
+import { api } from '../api.js';
+
+// Global state for planner interaction & real-time sensing
+if (!window.plannerState) {
+  window.plannerState = {
+    selectedPlaces: ["Baga Beach Watersports", "Fort Aguada & 17th-Century Lighthouse", "Grande Island Scuba Diving & Dolphin Spotting"],
+    customPlaces: [],
+    selectedOperatorId: null,
+    userHasManuallySelectedOperator: false,
+    matchedOperators: [],
+    sensedData: null,
+    isOperatorsDrawerOpen: false,
+    operatorSearchQuery: "",
+    operatorDestFilter: "all",
+    isSensingLoading: false,
+    packageType: "private", // "private" or "group"
+    selectedDistrict: null,
+    activeDistrictLandmarks: null,
+    districtSearchQuery: "",
+    districtStateFilter: "all",
+    districtTerrainFilter: "all",
+    isDistrictSelectorOpen: false,
+    loadedDistrictsList: [],
+    detectedFestivals: []
+  };
+}
+
+// Preset Landmarks Catalog for Instant Offline / Fast Display
+const DEFAULT_LANDMARKS = {
+  "goa": [
+    { name: "Baga Beach Watersports", category: "Adventure", icon: "waves", desc: "Parasailing, Jet Ski & Bumper rides" },
+    { name: "Fort Aguada & 17th-Century Lighthouse", category: "Heritage", icon: "shield", desc: "Portuguese coastal bastion" },
+    { name: "Dudhsagar Waterfalls & Spice Safari", category: "Nature", icon: "droplets", desc: "4x4 jungle jeep safari" },
+    { name: "Grande Island Scuba Diving & Dolphin Spotting", category: "Adventure", icon: "compass", desc: "Certified PADI coral reef diving" },
+    { name: "Fontainhas Latin Quarter Walking Tour", category: "Culture", icon: "camera", desc: "Colonial Portuguese alleys & bakeries" },
+    { name: "Curlies & Shiva Valley Sunset Beach Shack", category: "Nightlife", icon: "sparkles", desc: "Cliffside seafood & sunset music" },
+    { name: "Chapora Fort (Sunset Panorama)", category: "Heritage", icon: "map-pin", desc: "Vagator & Morjim coast view" },
+    { name: "Mandovi River Luxury Sunset Cruise", category: "Relaxed", icon: "navigation", desc: "Goan folk dance & DJ sailing" }
+  ],
+  "jaipur": [
+    { name: "Amer Fort & Sheesh Mahal (Mirror Palace)", category: "Heritage", icon: "shield", desc: "Grand Rajputana hilltop palace" },
+    { name: "Hawa Mahal (Palace of Winds)", category: "Heritage", icon: "camera", desc: "953 honeycombed royal jharokhas" },
+    { name: "City Palace & Royal Armory Museum", category: "Culture", icon: "award", desc: "Peacock Gate & Maharaja galleries" },
+    { name: "Nahargarh Fort Sunset Over Pink City", category: "Scenic", icon: "sun", desc: "Aravali sunset bastion views" },
+    { name: "Chokhi Dhani Rajasthani Cultural Village", category: "Food", icon: "utensils", desc: "Folk dances, camel rides & thali" },
+    { name: "Johari Bazaar & Bapu Bazaar Shopping Trail", category: "Shopping", icon: "shopping-bag", desc: "Jewelry, pottery & handicrafts" }
+  ],
+  "kerala": [
+    { name: "Alleppey Luxury Private Houseboat Cruise", category: "Relaxed", icon: "anchor", desc: "Emerald lagoon cruise & Karimeen feast" },
+    { name: "Munnar Kolukkumalai Tea Estate & Cloud Walk", category: "Nature", icon: "mountain", desc: "High-altitude organic tea plantations" },
+    { name: "Fort Kochi Heritage & Chinese Fishing Nets", category: "Culture", icon: "camera", desc: "Colonial spice warehouses & nets" },
+    { name: "Periyar Wildlife Sanctuary Jungle Boat Safari", category: "Adventure", icon: "compass", desc: "Wild elephant herds & lake safari" }
+  ],
+  "manali": [
+    { name: "Solang Valley Paragliding & Zorbing Rush", category: "Adventure", icon: "wind", desc: "Tandem paragliding & mountain peaks" },
+    { name: "Rohtang Pass Snow Point & Glacier Walk", category: "Snow", icon: "mountain-snow", desc: "13,050 ft mountain snow sports" },
+    { name: "Old Manali Wooden Cafes & Hadimba Temple", category: "Culture", icon: "coffee", desc: "Cedar forests & riverside cafes" },
+    { name: "Beas River White Water Rafting Challenge", category: "Adventure", icon: "zap", desc: "14 km Grade III rapid challenge" }
+  ],
+  "udaipur": [
+    { name: "City Palace & Lake Pichola Royal Boat Ride", category: "Heritage", icon: "anchor", desc: "Marble courtyards & private boat ride" },
+    { name: "Sajjangarh Monsoon Palace Sunset Panorama", category: "Scenic", icon: "sun", desc: "Hilltop palace overlooking Aravali" },
+    { name: "Saheliyon-ki-Bari Marble Fountains & Gardens", category: "Culture", icon: "flower", desc: "Lotus pools & royal courtyards" }
+  ],
+  "kashmir": [
+    { name: "Dal Lake Morning Shikara Cruise & Floating Market", category: "Scenic", icon: "sun", desc: "Traditional cedar boat & water lilies" },
+    { name: "Gulmarg Gondola Cable Car (Phase 1 & 2)", category: "Snow", icon: "mountain-snow", desc: "13,780 ft ropeway & alpine skiing" },
+    { name: "Pahalgam Betaab Valley & Aru Valley Safari", category: "Nature", icon: "trees", desc: "Pristine Lidder river & pine trails" }
+  ],
+  "rishikesh": [
+    { name: "Shivpuri Grade IV River Rafting & Cliff Jump", category: "Adventure", icon: "waves", desc: "Roller Coaster rapids & 25ft jump" },
+    { name: "Triveni Ghat Evening Maha Ganga Aarti", category: "Culture", icon: "flame", desc: "Vedic chants & floating oil lamps" },
+    { name: "Beatles Ashram & Sound Meditation Sanctuary", category: "Wellness", icon: "sparkles", desc: "Chaurasi Kutia dome murals" }
+  ],
+  "mumbai": [
+    { name: "Gateway of India & Colaba Heritage Trail", category: "Heritage", icon: "landmark", desc: "Indo-Saracenic monument & Arabian Sea ferry" },
+    { name: "Marine Drive Queen's Necklace Promenade", category: "Scenic", icon: "sun", desc: "Curved coastal boulevard & sunset views" },
+    { name: "Elephanta Caves UNESCO Rock Cut Sanctuary", category: "Heritage", icon: "shield", desc: "Lord Shiva monolithic sculpture" },
+    { name: "Ganesh Chaturthi Lalbaugcha Raja Pandal", category: "Festival", icon: "sparkles", desc: "World-famous celebratory procession & aarti" }
+  ]
+};
+
+export function renderTripPlanner() {
+  const state = store.getState();
+  const currentDest = window.plannerSelectedDest || 'Goa';
+  const destKey = currentDest.toLowerCase().split(' ')[0].split('(')[0].trim();
+  const landmarks = (window.plannerState.activeDistrictLandmarks && window.plannerState.activeDistrictLandmarks.length > 0)
+    ? window.plannerState.activeDistrictLandmarks
+    : (DEFAULT_LANDMARKS[destKey] || DEFAULT_LANDMARKS["goa"]);
+
+  // Matched operators
+  const matchedOps = window.plannerState.matchedOperators.length > 0
+    ? window.plannerState.matchedOperators
+    : (state.operators && state.operators.length > 0 ? state.operators.slice(0, 10).map((op, idx) => ({
+      id: op.id,
+      name: op.name,
+      company_name: op.company_name || 'Travora Certified Operator',
+      rating: op.rating || 4.9,
+      tours_completed: op.tours_completed || 120,
+      fleet_size: op.fleet_size || "12 Multi-tier Vehicles",
+      response_time_minutes: op.response_time_minutes || 4,
+      badge: idx === 0 ? "Top Rated Certified Partner" : "Verified Local Fleet",
+      match_score: 95 - idx * 2,
+      is_recommended: idx === 0,
+      specialties: op.specialties || ["Tour Planning", "Fleet Transit", "Dynamic Adaptation"],
+      operating_destinations: op.operating_destinations || ["All India"],
+      ai_recommendation_reason: "High compatibility partner with on-ground fleet in region."
+    })) : [
+      {
+        id: 1,
+        name: "Aarav Mehta",
+        company_name: "Goa Coastal Expeditions & Watersports",
+        rating: 4.9,
+        tours_completed: 184,
+        fleet_size: "14 Speedboats & Jet Skis, 8 AC Vans",
+        response_time_minutes: 4,
+        badge: "Top Rated Goa Partner",
+        match_score: 99,
+        is_recommended: true,
+        specialties: ["Beach", "Adventure", "Scuba Diving", "Watersports"],
+        operating_destinations: ["Goa", "Mumbai"],
+        ai_recommendation_reason: "Goa Coastal Expeditions is the highest-compatibility operator for your requested places in Goa with 4.9 star traveler satisfaction and 14 Speedboats & Jet Skis."
+      },
+      {
+        id: 7,
+        name: "Rohan Deshmukh",
+        company_name: "Konkan Express Tour Liners",
+        rating: 4.7,
+        tours_completed: 168,
+        fleet_size: "18 Volvo Multi-Axle Coaches",
+        response_time_minutes: 5,
+        badge: "Best Value Partner",
+        match_score: 91,
+        is_recommended: false,
+        specialties: ["Budget", "Backpackers", "Beach Shacks", "Foodie Trails"],
+        operating_destinations: ["Goa", "Mumbai"],
+        ai_recommendation_reason: "Specialist in seamless transit, group connections, and authentic seafood shack trails."
+      }
+    ]);
+
+  const topOperator = matchedOps.find(op => op.is_recommended) || matchedOps[0];
+
+  let selectedOpId = window.plannerState.selectedOperatorId;
+  if (!selectedOpId) {
+    selectedOpId = topOperator ? topOperator.id : null;
+    window.plannerState.selectedOperatorId = selectedOpId;
+  }
+  const activeOperator = matchedOps.find(op => op.id === selectedOpId) || topOperator;
+  const isCustomUserChoice = window.plannerState.userHasManuallySelectedOperator && activeOperator && topOperator && (activeOperator.id !== topOperator.id);
+
+  // Sensed places breakdown
+  const sensedData = window.plannerState.sensedData || {
+    total_sensed: window.plannerState.selectedPlaces.length + window.plannerState.customPlaces.length,
+    style_breakdown: { "Beach & Adventure": "60%", "Heritage": "40%" },
+    transit_estimate_minutes: 22,
+    pace_rating: "Optimal Pace (2-3 highlights/day)",
+    personalized_tips: [
+      {
+        icon: "waves",
+        title: "Marine & Water Sports Scheduling",
+        tip: "Coastal watersports are scheduled for morning (07:30 - 11:30 AM) when the sea is calm and dolphin visibility peaks."
+      },
+      {
+        icon: "shield",
+        title: "Golden-Hour Forts & Sunset Vistas",
+        tip: "Fort ramparts are sequenced for late afternoon (04:00 - 06:30 PM) to avoid midday heat and capture panoramic sunset photos."
+      },
+      {
+        icon: "zap",
+        title: "Real-Time Route Optimization",
+        tip: "All requested spots are grouped into an efficient coastal transit loop (~20 min transit between highlights)."
+      }
+    ]
+  };
+
+  // Filter operators for drawer
+  const drawerFilter = window.plannerState.operatorDestFilter || "all";
+  const drawerSearch = (window.plannerState.operatorSearchQuery || "").toLowerCase();
+  const filteredOperators = matchedOps.filter(op => {
+    const matchesDest = drawerFilter === "all" || (op.operating_destinations || []).some(d => d.toLowerCase().includes(drawerFilter.toLowerCase()));
+    const matchesSearch = !drawerSearch ||
+      op.name.toLowerCase().includes(drawerSearch) ||
+      op.company_name.toLowerCase().includes(drawerSearch) ||
+      (op.fleet_size || "").toLowerCase().includes(drawerSearch) ||
+      (op.specialties || []).some(s => s.toLowerCase().includes(drawerSearch));
+    return matchesDest && matchesSearch;
+  });
+
+  const detectedFestivals = window.plannerState.detectedFestivals || [];
+  const packageType = window.plannerState.packageType || "private";
+
+  return `
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      
+      <!-- HEADER -->
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 text-xs font-bold border border-teal-500/20">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-500"></i>
+          <span>AI TRIP ARCHITECT & OPERATOR MATCHMAKER</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+          Design Your Dynamic Itinerary
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+          Specify your destination, district, dates, budget, desired landmarks, and travel style. TRAVORA pairs you with the highest-matched certified Tour Operator and synthesizes a live-adaptable schedule.
+        </p>
+      </div>
+
+      <!-- FORM CONTAINER -->
+      <div class="surface-card bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-8 relative overflow-hidden backdrop-blur-xl">
+        
+        <form id="trip-planner-form" onsubmit="window.handleCreateTripSubmit(event)" class="space-y-8">
+          
+          <!-- Hidden destination name input ensures correct district is ALWAYS submitted -->
+          <input type="hidden" name="destination_name" id="planner-destination-hidden-input" value="${currentDest}" />
+
+          <!-- STEP 1: DESTINATION & INDIA DISTRICT INTELLIGENCE -->
+          <div class="space-y-4">
+            
+            <!-- ACTIVE SELECTED DESTINATION HERO BANNER -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/5 border-2 border-teal-500/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-teal-500/30 shrink-0">
+                  <i data-lucide="map-pin" class="w-6 h-6 animate-bounce"></i>
+                </div>
+                <div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">Current Destination:</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-teal-500/20 text-teal-800 dark:text-teal-200 border border-teal-500/30">
+                      ${window.plannerState.selectedDistrict ? (window.plannerState.selectedDistrict.district_code || 'DISTRICT DIRECTORY') : 'POPULAR DESTINATION'}
+                    </span>
+                    <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                      <i data-lucide="shield-check" class="w-3 h-3 text-emerald-500"></i>
+                      <span>Verified Fleet Available</span>
+                    </span>
+                  </div>
+                  <div class="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center space-x-2 mt-0.5">
+                    <span>${currentDest}</span>
+                    ${window.plannerState.selectedDistrict && window.plannerState.selectedDistrict.state ? }`<span class="text-sm font-semibold text-slate-500 dark:text-slate-400">(${window.plannerState.selectedDistrict.state})</span>` : ''}
+                  </div>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">
+                    ${window.plannerState.selectedDistrict && window.plannerState.selectedDistrict.terrain ? }`${window.plannerState.selectedDistrict.terrain} - Season: ${window.plannerState.selectedDistrict.popular_season || 'Year-round'}` : 'Dynamic AI routing with real-time on-ground tour operator pairing'}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-2 shrink-0">
+                <button 
+                  type="button" 
+                  onclick="window.toggleDistrictSelector()" 
+                  class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-md shadow-teal-500/20 transition flex items-center justify-center space-x-1.5 hover:-translate-y-0.5">
+                  <i data-lucide="compass" class="w-4 h-4"></i>
+                  <span>${window.plannerState.isDistrictSelectorOpen ? 'Close Directory' : 'Explore All 802 Districts'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Popular Holiday Hubs:
+              </label>
+              <span class="text-[11px] text-slate-400">Or use directory above for all 802 Indian districts</span>
+            </div>
+
+            <!-- POPULAR HOLIDAY HUBS WITH HIGH-RES IMAGERY -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              ${[
+                { name: "Goa", state: "Goa Coast", img: "/static/assets/destinations/goa_beach_sunset.jpg" },
+                { name: "Jaipur", state: "Rajasthan", img: "/static/assets/destinations/jaipur_royal_palace.jpg" },
+                { name: "Kerala", state: "Alleppey & Munnar", img: "/static/assets/destinations/kerala_houseboat_lake.jpg" },
+                { name: "Manali", state: "Himachal", img: "/static/assets/destinations/manali_snow_peaks.jpg" },
+                { name: "Udaipur", state: "Rajasthan", img: "/static/assets/destinations/udaipur_lake_palace.jpg" },
+                { name: "Kashmir", state: "Srinagar & Gulmarg", img: "/static/assets/destinations/kashmir_snow_resort.jpg" },
+                { name: "Varanasi", state: "Uttar Pradesh", img: "/static/assets/destinations/varanasi_ganga_ghats.jpg" },
+                { name: "Andaman", state: "Bay of Bengal", img: "/static/assets/destinations/andaman_havelock_beach.jpg" }
+              ].map((d) => {
+                const isChecked = d.name.toLowerCase() === currentDest.toLowerCase() && !window.plannerState.selectedDistrict;
+                return `
+                  <div 
+                    onclick="window.onPlannerDestChange('${d.name}')" 
+                    class="cursor-pointer group relative h-28 rounded-2xl overflow-hidden border-2 ${isChecked ? 'border-red-600 ring-2 ring-red-500/30 shadow-lg' : 'border-slate-200 dark:border-slate-700 hover:border-red-500'} transition transform hover:-translate-y-1 shadow-sm">
+                    <img 
+                      src="${d.img}" 
+                      alt="${d.name}" 
+                      class="w-full h-full object-cover group-hover:scale-110 transition duration-500 brightness-[0.75] group-hover:brightness-[0.9]"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                    <div class="absolute bottom-2 left-2.5 right-2.5 text-white">
+                      <div class="font-extrabold text-sm leading-tight flex items-center justify-between">
+                        <span>${d.name}</span>
+                        ${isChecked ? '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>' : ''}
+                      </div>
+                      <div class="text-[10px] text-slate-300 font-medium">${d.state}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- EXPANDABLE 802 DISTRICTS DIRECTORY SEARCH -->
+            ${window.plannerState.isDistrictSelectorOpen ? }`
+              <div class="p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-slate-950 border-2 border-teal-500/30 space-y-4 shadow-xl">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                      <i data-lucide="compass" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-extrabold text-slate-900 dark:text-white">
+                        India Administrative District Directory (802 Districts)
+                      </h4>
+                      <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Official 28 States & 8 Union Territories - Real-Time Landmark & Fleet Intelligence
+                      </p>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    onclick="window.toggleDistrictSelector()" 
+                    class="self-end sm:self-auto text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center space-x-1">
+                    <span>Close</span>
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+
+                <!-- FILTER ROW: STATE SELECT + TERRAIN SELECT + SEARCH INPUT -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  
+                  <!-- STATE DROPDOWN -->
+                  <div class="sm:col-span-4">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Filter By State / UT:</label>
+                    <select 
+                      id="district-state-filter"
+                      onchange="window.filterDistrictsDirectory()"
+                      class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 font-semibold">
+                      <option value="all">All States & Union Territories (36)</option>
+                      ${[
+                        'Andaman & Nicobar', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chandigarh',
+                        'Chhattisgarh', 'Dadra & Nagar Haveli and Daman & Diu', 'Delhi', 'Goa', 'Gujarat', 'Haryana',
+                        'Himachal Pradesh', 'Jammu & Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Ladakh',
+                        'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+                        'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+                        'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+                      ].map(st => `<option value="${st}" ${window.plannerState.districtStateFilter === st ? 'selected' : ''}>${st}</option>}`).join('')}
+                    </select>
+                  </div>
+
+                  <!-- TERRAIN DROPDOWN -->
+                  <div class="sm:col-span-3">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Terrain / Travel Style:</label>
+                    <select 
+                      id="district-terrain-filter"
+                      onchange="window.filterDistrictsDirectory()"
+                      class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 font-semibold">
+                      <option value="all">All Terrains</option>
+                      <option value="Snow" ${window.plannerState.districtTerrainFilter === 'Snow' ? 'selected' : ''}>Himalayan & Snowfall</option>
+                      <option value="Spiritual" ${window.plannerState.districtTerrainFilter === 'Spiritual' ? 'selected' : ''}>Spiritual & River Ghats</option>
+                      <option value="Beach" ${window.plannerState.districtTerrainFilter === 'Beach' ? 'selected' : ''}>Beaches & Coastal</option>
+                      <option value="Desert" ${window.plannerState.districtTerrainFilter === 'Desert' ? 'selected' : ''}>Desert & Sand Dunes</option>
+                      <option value="Heritage" ${window.plannerState.districtTerrainFilter === 'Heritage' ? 'selected' : ''}>Heritage & Forts</option>
+                      <option value="Wildlife" ${window.plannerState.districtTerrainFilter === 'Wildlife' ? 'selected' : ''}>Forest & Wildlife</option>
+                    </select>
+                  </div>
+
+                  <!-- SEARCH INPUT -->
+                  <div class="sm:col-span-5">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Search District Name:</label>
+                    <div class="relative">
+                      <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                      <input 
+                        type="text" 
+                        id="district-search-input"
+                        value="${window.plannerState.districtSearchQuery || ''}"
+                        placeholder="Search Varanasi, Shimla, Puri, Kutch, Leh Ladakh, Amritsar..." 
+                        oninput="window.filterDistrictsDirectory()"
+                        class="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                      <button 
+                        type="button" 
+                        onclick="document.getElementById('district-search-input').value=''; window.filterDistrictsDirectory();" 
+                        class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- DISTRICTS RESULTS CONTAINER (GRID OF RICH INTERACTIVE CARDS) -->
+                <div id="district-results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                  <!-- District cards loaded dynamically or fallback sample -->
+                  ${(window.plannerState.loadedDistrictsList && window.plannerState.loadedDistrictsList.length > 0)
+                    ? window.plannerState.loadedDistrictsList.map(dist => `
+                      <div 
+                        onclick="window.selectCustomDistrictByName('${dist.name.replace(/'/g, "\\'")}', '${dist.state.replace(/'/g, "\\'")}')" 
+                        class="cursor-pointer p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500 hover:shadow-md transition text-left space-y-1.5 group">
+                        <div class="flex items-start justify-between">
+                          <div>
+                            <div class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">${dist.name}</div>
+                            <div class="text-[10px] text-slate-400">${dist.state} - <span class="font-mono">${dist.district_code || ''}</span></div>
+                          </div>
+                          <span class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/20 shrink-0">
+                            ${dist.popular_season || 'Year-round'}
+                          </span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                          ${dist.terrain || 'Explore authentic regional experiences'}
+                        </div>
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[10px]">
+                          <span class="text-teal-600 dark:text-teal-400 font-bold group-hover:underline flex items-center space-x-1">
+                            <span>Select & Plan</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                          </span>
+                          <span class="text-slate-400">${(dist.tourist_places && dist.tourist_places.length) || 4}+ Sensed Spots</span>
+                        </div>
+                      </div>
+                    }`).join('')
+                    : `
+                      ${[
+                        { name: "Varanasi", state: "Uttar Pradesh", code: "UP-VAR", terrain: "Spiritual River Ghats & Living Heritage", season: "Oct - Mar" },
+                        { name: "Kutch", state: "Gujarat", code: "GJ-KUT", terrain: "White Salt Desert & Coastal Shores", season: "Nov - Feb" },
+                        { name: "Shimla", state: "Himachal Pradesh", code: "HP-SHI", terrain: "Himalayan Snowfall & Pine Glens", season: "Year-round" },
+                        { name: "Puri", state: "Odisha", code: "OD-PUR", terrain: "Sacred Coastline & Heritage Dunes", season: "Oct - Mar" },
+                        { name: "Ernakulam", state: "Kerala", code: "KL-ERN", terrain: "Emerald Backwaters & Spice Ports", season: "Sep - Mar" },
+                        { name: "Amritsar", state: "Punjab", code: "PB-ASR", terrain: "Spiritual Capital & Historic Citadel", season: "Oct - Mar" },
+                        { name: "Leh Ladakh", state: "Ladakh", code: "LA-LEH", terrain: "High-Altitude Passes & Monasteries", season: "May - Sep" },
+                        { name: "Agra", state: "Uttar Pradesh", code: "UP-AGR", terrain: "Mughal Architecture & Yamuna Vista", season: "Oct - Mar" },
+                        { name: "Gangtok", state: "Sikkim", code: "SK-EAS", terrain: "Eastern Himalayas & Alpine Lakes", season: "Year-round" }
+                      ].map(dist => `
+                        <div 
+                          onclick="window.selectCustomDistrictByName('${dist.name.replace(/'/g, "\\'")}', '${dist.state.replace(/'/g, "\\'")}')" 
+                          class="cursor-pointer p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500 hover:shadow-md transition text-left space-y-1.5 group">
+                          <div class="flex items-start justify-between">
+                            <div>
+                              <div class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">${dist.name}</div>
+                              <div class="text-[10px] text-slate-400">${dist.state} - <span class="font-mono">${dist.code}</span></div>
+                            </div>
+                            <span class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/20 shrink-0">
+                              ${dist.season}
+                            </span>
+                          </div>
+                          <div class="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                            ${dist.terrain}
+                          </div>
+                          <div class="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[10px]">
+                            <span class="text-teal-600 dark:text-teal-400 font-bold group-hover:underline flex items-center space-x-1">
+                              <span>Select & Plan</span>
+                              <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                            </span>
+                            <span class="text-slate-400 font-mono">Real-time Sensed</span>
+                          </div>
+                        </div>
+                      `).join('')}
+                    `}
+                </div>
+
+              </div>
+            ` : ''}
+
+          </div>
+
+          <!-- DATES & FESTIVAL INTELLIGENCE ENGINE -->
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Travel Start Date
+                </label>
+                <input 
+                  type="date" 
+                  id="plan_start_date" 
+                  name="start_date" 
+                  min="${new Date().toISOString().split('T')[0]}"
+                  value="${window.plannerStartDate || new Date().toISOString().split('T')[0]}"
+                  onchange="window.plannerStartDate=this.value;window.triggerDateChangeCheck()"
+                  class="w-full px-4 py-2.5 rounded-xl border border-[#DCC3AA] dark:border-slate-700 bg-[#FDF6F0] dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-[#810B38] focus:border-[#810B38] focus:outline-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Travel End Date
+                </label>
+                <input 
+                  type="date" 
+                  id="plan_end_date" 
+                  name="end_date" 
+                  min="${new Date().toISOString().split('T')[0]}"
+                  value="${window.plannerEndDate || (() => { const d = new Date(); d.setDate(d.getDate()+3); return d.toISOString().split('T')[0]; })()}"
+                  onchange="window.plannerEndDate=this.value;window.triggerDateChangeCheck()"
+                  class="w-full px-4 py-2.5 rounded-xl border border-[#DCC3AA] dark:border-slate-700 bg-[#FDF6F0] dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-[#810B38] focus:border-[#810B38] focus:outline-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Travelers Count
+                </label>
+                <select 
+                  name="travelers_count" 
+                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                  <option value="1">1 Traveler (Solo)</option>
+                  <option value="2" selected>2 Travelers (Couple/Duo)</option>
+                  <option value="3">3 Travelers</option>
+                  <option value="4">4 Travelers (Family/Small Group)</option>
+                  <option value="6">6+ Travelers (Large Group)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- DYNAMIC FESTIVAL INTELLIGENCE ALERT BANNER -->
+            ${detectedFestivals.length > 0 ? }`
+              <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-teal-500/15 border border-amber-500/30 space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                    <h4 class="font-extrabold text-xs text-slate-900 dark:text-white">
+                      Festival Detected in Travel Window: ${detectedFestivals[0].name}
+                    </h4>
+                  </div>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Crowd Factor: ${detectedFestivals[0].crowd_factor || 1.8}x High Peak
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  ${detectedFestivals[0].description || 'Cultural festivities and temple aartis coincide with your selected dates. TRAVORA has pre-adapted itinerary buffers, crowd routes, and operator packaging.'}
+                </p>
+                <div class="text-[10px] text-amber-700 dark:text-amber-300 font-semibold flex items-center space-x-2">
+                  <span>Experiences: ${Array.isArray(detectedFestivals[0].key_experiences) ? detectedFestivals[0].key_experiences.join(', ') : detectedFestivals[0].key_experiences}</span>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- GROUP VS PRIVATE PACKAGE SELECTOR -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Package Format: Group Tour vs. Private Bespoke Tour
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <label class="cursor-pointer" onclick="window.setPackageType('group')">
+                  <input type="radio" name="package_type" value="group" class="peer sr-only" ${packageType === 'group' ? 'checked' : ''} />
+                  <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-teal-500 peer-checked:bg-teal-500/10 transition space-y-1">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                      <span class="flex items-center space-x-1.5">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-teal-500"></i>
+                        <span>Group Tour Package</span>
+                      </span>
+                      <span class="text-[10px] px-2 py-0.5 rounded bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold">Cost Optimized</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                      Shared luxury coach transit, scheduled group departures, shared certified guide, and fixed group itinerary.
+                    </p>
+                  </div>
+                </label>
+
+                <label class="cursor-pointer" onclick="window.setPackageType('private')">
+                  <input type="radio" name="package_type" value="private" class="peer sr-only" ${packageType === 'private' ? 'checked' : ''} />
+                  <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 peer-checked:border-teal-500 peer-checked:bg-teal-500/10 transition space-y-1">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                      <span class="flex items-center space-x-1.5">
+                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-500"></i>
+                        <span>Private Bespoke Tour</span>
+                      </span>
+                      <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">100% Flexible</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                      Dedicated vehicle (Innova Crysta / Sedan), personalized daily pace, private hotel rooms, and on-demand adjustments.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- STEP 2: REAL-TIME LANDMARK & PLACES SENSING -->
+          <div class="space-y-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-teal-500/5 via-slate-50 to-slate-50 dark:from-teal-950/20 dark:via-slate-950/40 dark:to-slate-950/40 border border-teal-500/20">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center space-x-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span class="text-teal-600 dark:text-teal-400 font-extrabold">Step 2 - Real-Time Places Sensing Engine</span>
+                </label>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  Select highlights or add any custom spot. TRAVORA analyzes geo-clusters, senses activity tags, and matches local fleet operators.
+                </p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-[10px] font-bold px-3 py-1 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30 flex items-center space-x-1">
+                  <i data-lucide="map-pin" class="w-3 h-3"></i>
+                  <span>${window.plannerState.selectedPlaces.length + window.plannerState.customPlaces.length} Sensed Spots</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- SENSED STYLE BREAKDOWN -->
+            ${sensedData && sensedData.style_breakdown ? }`
+              <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                    <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-teal-500"></i>
+                    <span>Sensed Travel Profile & Distribution:</span>
+                  </span>
+                  <span class="text-[10px] font-semibold text-slate-400">
+                    Est. Inter-Spot Transit: ~${sensedData.transit_estimate_minutes || 20} mins
+                  </span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  ${Object.entries(sensedData.style_breakdown).map(([cat, pct]) => `
+                    <span class="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-[10px] border border-teal-500/20 flex items-center space-x-1">
+                      <span>${cat}:</span>
+                      <span class="text-amber-500 font-extrabold">${pct}</span>
+                    </span>
+                  }`).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- POPULAR LANDMARK PILLS -->
+            <div class="space-y-1.5">
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                Click Highlights to Add / Remove in Real-Time:
+              </span>
+              <div class="flex flex-wrap gap-2 pt-0.5">
+                ${landmarks.map(lm => {
+        const isSelected = window.plannerState.selectedPlaces.includes(lm.name);
+        return }`
+                    <button 
+                      type="button" 
+                      onclick="window.togglePlannerPlace('${lm.name.replace(/'/g, "\\'")}')"
+                      class="px-3 py-1.5 rounded-xl text-xs font-medium border transition flex items-center space-x-1.5 ${isSelected
+            ? 'bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-500/20'
+            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-teal-500'
+          }">
+                      <span>${isSelected ? 'Selected' : '+ Add'}</span>
+                      <span>${lm.name}</span>
+                      <span class="text-[9px] px-1.5 py-0.5 rounded ${isSelected ? 'bg-teal-700 text-teal-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">${lm.category}</span>
+                    </button>
+                  `;
+      }).join('')}
+              </div>
+            </div>
+
+            <!-- CUSTOM PLACES INPUT -->
+            <div class="space-y-2 pt-1">
+              <div class="flex items-center space-x-2">
+                <div class="relative flex-1">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-3"></i>
+                  <input 
+                    type="text" 
+                    id="custom-place-input" 
+                    placeholder="Want to visit somewhere else? (e.g. Anjuna Flea Market, Thalassa, Tito's Lane) - Press Enter" 
+                    onkeydown="if(event.key==='Enter'){event.preventDefault(); window.addCustomPlace();}"
+                    class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                  />
+                </div>
+                <button 
+                  type="button" 
+                  onclick="window.addCustomPlace()" 
+                  class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-sm transition shrink-0 flex items-center space-x-1">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  <span>Add Place</span>
+                </button>
+              </div>
+
+              ${window.plannerState.customPlaces.length > 0 ? }`
+                <div class="flex flex-wrap gap-1.5 mt-1">
+                  ${window.plannerState.customPlaces.map((cp, idx) => `
+                    <span class="inline-flex items-center space-x-1 px-3 py-1 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs border border-amber-500/30">
+                      <span>${cp}</span>
+                      <button type="button" onclick="window.removeCustomPlace(${idx})" class="hover:text-red-500 font-bold ml-1.5">×</button>
+                    </span>
+                  }`).join('')}
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- PERSONALIZED TIPS -->
+            ${sensedData && sensedData.personalized_tips && sensedData.personalized_tips.length > 0 ? }`
+              <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-teal-500/30 shadow-sm space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                    <h4 class="font-extrabold text-xs text-slate-900 dark:text-white">
+                      Personalized AI Insights for Sensed Spots
+                    </h4>
+                  </div>
+                  <span class="text-[10px] text-teal-600 dark:text-teal-400 font-bold">Auto-Optimized Schedule</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  ${sensedData.personalized_tips.map(tip => `
+                    <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 text-[11px] space-y-1 border border-slate-200 dark:border-slate-800">
+                      <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+                        <i data-lucide="${tip.icon || 'compass'}" class="w-3.5 h-3.5 text-teal-500"></i>
+                        <span>${tip.title}</span>
+                      </div>
+                      <p class="text-slate-500 dark:text-slate-400 leading-relaxed">
+                        ${tip.tip}
+                      </p>
+                    </div>
+                  }`).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+          </div>
+
+          <!-- STEP 3: TOUR OPERATOR MATCHMAKER -->
+          <div class="space-y-4 p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center space-x-2">
+                  <i data-lucide="building-2" class="w-4 h-4 text-amber-500"></i>
+                  <span>Step 3 - Tour Operator Assignment (AI Match & Choice)</span>
+                </label>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  TRAVORA evaluated certified local operators across India. You can select the top recommendation or choose another operator.
+                </p>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <button 
+                  type="button" 
+                  onclick="window.toggleOperatorsDrawer()" 
+                  class="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
+                  <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                  <span>${window.plannerState.isOperatorsDrawerOpen ? 'Close Operator Catalog' : 'Browse All Operators'}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ACTIVE OPERATOR CARD -->
+            ${activeOperator ? }`
+              <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 ${isCustomUserChoice ? 'border-amber-500 shadow-md' : 'border-teal-500/80 shadow-lg shadow-teal-500/10'} space-y-3.5 transition">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div class="flex items-center space-x-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500 via-amber-500 to-emerald-500 p-[1.5px] shadow-md shrink-0">
+                      <div class="w-full h-full rounded-[14px] bg-slate-950 text-white flex items-center justify-center font-black text-sm">
+                        ${activeOperator.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="flex items-center space-x-2">
+                        <h4 class="font-black text-sm sm:text-base text-slate-900 dark:text-white">
+                          ${activeOperator.name}
+                        </h4>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${isCustomUserChoice ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30' : 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30'}">
+                          ${isCustomUserChoice ? 'Traveler Selected' : (activeOperator.badge || 'Top Pick')}
+                        </span>
+                      </div>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        ${activeOperator.company_name}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center space-x-2.5 self-start sm:self-center">
+                    <div class="text-right">
+                      <div class="text-sm font-black text-amber-500 flex items-center space-x-1 justify-end">
+                        <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-500 text-amber-500"></i>
+                        <span>${activeOperator.rating || 4.9}</span>
+                        <span class="text-[10px] text-slate-400 font-normal">(${activeOperator.tours_completed || 150}+ tours)</span>
+                      </div>
+                      <div class="text-[10px] font-bold text-teal-600 dark:text-teal-400">
+                        ${activeOperator.response_time_minutes || 4}-min response dispatch
+                      </div>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-xl bg-teal-500/10 text-teal-700 dark:text-teal-300 font-extrabold text-xs border border-teal-500/30">
+                      ${activeOperator.match_score || 98}% Match
+                    </div>
+                  </div>
+                </div>
+
+                <!-- AI RATIONALE BANNER -->
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 flex items-start space-x-2">
+                  <i data-lucide="sparkles" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                  <div>
+                    <strong>${isCustomUserChoice ? 'Traveler Chosen Assignment:' : 'AI Match Rationale:'}</strong>
+                    <span class="ml-1">${activeOperator.ai_recommendation_reason}</span>
+                  </div>
+                </div>
+
+                <!-- OPERATOR CREDENTIALS & ACTION BUTTONS -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px]">
+                  <div class="flex flex-wrap items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">Fleet:</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">${activeOperator.fleet_size || '12 Vehicles'}</span>
+                    <span>-</span>
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">Specialties:</span>
+                    ${(activeOperator.specialties || ['Beach', 'Adventure']).map(s => `
+                      <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-600 dark:text-teal-400 font-medium text-[10px]">${s}</span>
+                    }`).join('')}
+                  </div>
+
+                  <div class="flex items-center space-x-2">
+                    ${isCustomUserChoice && topOperator ? `
+                      <button 
+                        type="button" 
+                        onclick="window.resetToAIRecommendedOperator()" 
+                        class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold transition flex items-center space-x-1"
+                        title="Reset operator selection to AI Top Pick">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3 text-teal-500"></i>
+                        <span>Reset to AI Pick</span>
+                      </button>
+                    }` : ''}
+                    <button 
+                      type="button" 
+                      onclick="window.openOperatorDetailModal(${activeOperator.id})" 
+                      class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-[11px] font-bold transition flex items-center space-x-1">
+                      <i data-lucide="info" class="w-3 h-3"></i>
+                      <span>View Bio & Fleet</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      onclick="window.toggleOperatorsDrawer()" 
+                      class="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 text-teal-700 dark:text-teal-300 text-[11px] font-bold transition">
+                      Choose Another
+                    </button>
+                  </div>
+                </div>
+
+                <input type="hidden" name="operator_id" id="selected-operator-id" value="${activeOperator.id}" />
+              </div>
+            ` : ''}
+
+            <!-- EXPANDABLE OPERATOR DRAWER -->
+            ${window.plannerState.isOperatorsDrawerOpen ? }`
+              <div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3.5">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h5 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Compare & Choose an Operator (${filteredOperators.length} Available)
+                    </h5>
+                    <p class="text-[11px] text-slate-400">
+                      Filter by destination or search by vehicle type, specialty, or company name.
+                    </p>
+                  </div>
+
+                  <div class="relative w-full sm:w-64">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+                    <input 
+                      type="text" 
+                      placeholder="Search name, fleet, scuba..." 
+                      value="${window.plannerState.operatorSearchQuery || ''}"
+                      oninput="window.filterOperatorsSearch(this.value)"
+                      class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
+                  ${filteredOperators.map(op => {
+        const isSelected = op.id === selectedOpId;
+        return `
+                      <div 
+                        class="p-3.5 rounded-2xl border transition flex flex-col justify-between space-y-2 ${isSelected
+            ? 'bg-teal-500/10 border-teal-500 text-slate-900 dark:text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          }">
+                        
+                        <div class="space-y-1">
+                          <div class="flex items-center justify-between">
+                            <div class="font-bold text-xs text-slate-900 dark:text-white flex items-center space-x-1.5">
+                              <span>${op.name}</span>
+                              ${op.is_recommended ? '<span class="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold">Top Pick</span>' : ''}
+                            </div>
+                            <span class="text-[10px] font-extrabold ${isSelected ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'}">${op.match_score}% Match</span>
+                          </div>
+
+                          <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium line-clamp-1">
+                            ${op.company_name}
+                          </div>
+
+                          <div class="text-[10px] text-slate-400 flex items-center space-x-2 pt-0.5">
+                            <span class="flex items-center space-x-0.5">
+                              <i data-lucide="star" class="w-3 h-3 text-amber-500"></i>
+                              <span>${op.rating}</span>
+                            </span>
+                            <span>-</span>
+                            <span>${op.response_time_minutes}m response</span>
+                            <span>-</span>
+                            <span>${op.fleet_size}</span>
+                          </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1 text-[9px] pt-1">
+                          ${(op.specialties || []).slice(0, 3).map(s => }`
+                            <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${s}</span>
+                          `).join('')}
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                          <button 
+                            type="button" 
+                            onclick="window.openOperatorDetailModal(${op.id})" 
+                            class="text-teal-600 dark:text-teal-400 hover:underline font-bold text-[10px] flex items-center space-x-1">
+                            <i data-lucide="eye" class="w-3 h-3"></i>
+                            <span>View Profile</span>
+                          </button>
+
+                          <button 
+                            type="button" 
+                            onclick="window.selectPlannerOperator(${op.id})" 
+                            class="px-3 py-1 rounded-xl font-extrabold text-[10px] transition ${isSelected
+            ? 'bg-teal-600 text-white shadow-sm'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-teal-500 hover:text-white'
+          }">
+                            ${isSelected ? 'Selected' : 'Choose Operator'}
+                          </button>
+                        </div>
+
+                      </div>
+                    }`;
+      }).join('')}
+                </div>
+
+              </div>
+            ` : ''}
+
+          </div>
+
+          <!-- STEP 4: BUDGET SLIDER -->
+          <div class="space-y-2 p-4 rounded-2xl border" style="background:linear-gradient(135deg,rgba(241,226,209,0.5),rgba(220,195,170,0.3));border-color:#DCC3AA;">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-xs font-bold uppercase tracking-wider" style="color:#541A1A;">
+                  Step 4 - Total Budget (TRAVORA will NEVER exceed this)
+                </label>
+                <p class="text-[10px] mt-0.5" style="color:#810B38;">&#x2714; Budget is strictly enforced — all hotels, transport &amp; activities are picked to fit within this limit</p>
+              </div>
+              <span id="budget-display" class="text-xl font-black" style="color:#810B38;">
+                Rs 25,000
+              </span>
+            </div>
+            <input 
+              type="range" 
+              name="budget_total" 
+              id="budget-slider" 
+              min="5000" 
+              max="250000" 
+              step="5000" 
+              value="${window.plannerBudget || 25000}"
+              oninput="window.plannerBudget=parseInt(this.value);document.getElementById('budget-display').innerText = 'Rs ' + parseInt(this.value).toLocaleString('en-IN')"
+              class="w-full h-2.5 rounded-lg cursor-pointer" style="accent-color:#810B38;"
+            />
+            <div class="flex justify-between text-[11px] font-medium" style="color:#541A1A;">
+              <span>Rs 5,000 (Budget)</span>
+              <span>Rs 50,000 (Premium)</span>
+              <span>Rs 2,50,000 (Luxury)</span>
+            </div>
+          </div>
+
+          <!-- STEP 5: TRAVEL STYLE -->
+          <div class="space-y-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Step 5 - Travel Style
+            </label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              ${[
+      { id: "Beach + Adventure + Food", label: "Beach & Adventure", icon: "waves" },
+      { id: "Relaxed & Leisure", label: "Relaxed & Leisure", icon: "coffee" },
+      { id: "Culture & Heritage", label: "Culture & Heritage", icon: "landmark" },
+      { id: "Luxury & Wellness", label: "Luxury & Wellness", icon: "sparkles" }
+    ].map((s, idx) => `
+                <label class="cursor-pointer">
+                  <input type="radio" name="travel_style" value="${s.id}" class="peer sr-only" ${idx === 0 ? 'checked' : ''} />
+                  <div class="p-3 rounded-xl border border-[#DCC3AA] peer-checked:border-[#810B38] peer-checked:bg-[#F1E2D1] dark:peer-checked:bg-[#810B38]/20 peer-checked:text-[#810B38] dark:peer-checked:text-[#DCC3AA] transition text-center space-y-1">
+                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">${s.label}</div>
+                  </div>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- STEP 6: SPECIFIC INTERESTS -->
+          <div class="space-y-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Step 6 - Specific Experiences & Themes
+            </label>
+            <div class="flex flex-wrap gap-2">
+              ${[
+      { id: "Beach", label: "Beach & Coastlines", checked: true },
+      { id: "Adventure", label: "Water Sports & Scuba", checked: true },
+      { id: "Food", label: "Local Culinary Trails", checked: true },
+      { id: "Heritage", label: "Heritage Forts & Palaces", checked: true },
+      { id: "Nightlife", label: "Beach Shacks & Music", checked: false },
+      { id: "Nature", label: "Waterfalls & Safaris", checked: false },
+      { id: "Photography", label: "Photography Walks", checked: false },
+      { id: "Shopping", label: "Flea Markets & Crafts", checked: false }
+    ].map(i => `
+                <label class="cursor-pointer">
+                  <input type="checkbox" name="interests" value="${i.id}" class="peer sr-only" ${i.checked ? 'checked' : ''} />
+                  <span class="inline-block px-3.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 peer-checked:border-teal-500 peer-checked:bg-teal-500/10 peer-checked:text-teal-600 dark:peer-checked:text-teal-400 transition hover:bg-slate-50 dark:hover:bg-slate-800">
+                    ${i.label}
+                  </span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- STEP 7 & 8: ACCOMMODATION & TRANSPORT -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                Step 7 - Accommodation Tier
+              </label>
+              <select 
+                name="accommodation_type" 
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <option value="Budget Stay">Budget Stay (Hostel / Guesthouse)</option>
+                <option value="3-Star" selected>3-Star Deluxe (Recommended Match)</option>
+                <option value="4-Star Resort">4-Star Beach / Mountain Resort</option>
+                <option value="5-Star Luxury Resort">5-Star Luxury Palace / Resort</option>
+                <option value="Boutique Villa">Boutique Heritage Villa</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                Step 8 - Transportation Mode
+              </label>
+              <select 
+                name="transport_type" 
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <option value="Volvo Bus" selected>Volvo AC Sleeper Coach (Group / Budget)</option>
+                <option value="Express Train">Vande Bharat / Express Train</option>
+                <option value="Flight">Direct Flight (Fastest)</option>
+                <option value="Private Cab">Private Innova Crysta / EV Sedan</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- SUBMIT ACTION -->
+          <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button 
+              type="submit" 
+              id="generate-tour-btn"
+              class="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white font-extrabold text-base shadow-xl shadow-teal-500/25 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+              <span>SYNTHESIZE PERSONALIZED ITINERARY WITH AI</span>
+            </button>
+          </div>
+
+        </form>
+
+        <!-- AI GENERATING OVERLAY / SKELETON -->
+        <div id="ai-planner-loader" class="hidden p-8 text-center space-y-6">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-teal-500 to-amber-500 flex items-center justify-center text-white animate-spin">
+            <i data-lucide="compass" class="w-8 h-8"></i>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white" id="loader-status-text">
+              Sensing your requested landmarks & calculating coordinates...
+            </h3>
+            <p class="text-xs text-slate-400">
+              TRAVORA multi-factor engine is matching certified operators and optimizing your schedule.
+            </p>
+          </div>
+          <div class="w-full max-w-md mx-auto bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+            <div id="loader-progress-bar" class="bg-gradient-to-r from-teal-500 to-emerald-400 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+// Global UI helper functions for planner
+let sensingDebounceTimer = null;
+
+window.triggerRealtimePlacesSensing = function () {
+  clearTimeout(sensingDebounceTimer);
+  sensingDebounceTimer = setTimeout(async () => {
+    const destName = window.plannerSelectedDest || 'Goa';
+    const allPlaces = [...window.plannerState.selectedPlaces, ...window.plannerState.customPlaces];
+    const sDate = document.getElementById('plan_start_date') ? document.getElementById('plan_start_date').value : '2026-09-12';
+    const eDate = document.getElementById('plan_end_date') ? document.getElementById('plan_end_date').value : '2026-09-15';
+
+    try {
+      const [senseRes, festRes] = await Promise.all([
+        api.sensePlaces({
+          destination_name: destName,
+          travel_style: "Beach + Adventure + Food",
+          interests: ["Beach", "Adventure"],
+          budget_total: 25000,
+          desired_places: allPlaces
+        }).catch(() => null),
+        api.checkFestivals({
+          destination_name: destName,
+          start_date: sDate,
+          end_date: eDate
+        }).catch(() => null)
+      ]);
+
+      if (senseRes) {
+        window.plannerState.sensedData = senseRes;
+        if (senseRes.matched_operators && senseRes.matched_operators.length > 0) {
+          window.plannerState.matchedOperators = senseRes.matched_operators;
+          if (!window.plannerState.userHasManuallySelectedOperator) {
+            window.plannerState.selectedOperatorId = senseRes.matched_operators[0].id;
+          }
+        }
+      }
+
+      if (festRes && festRes.detected_festivals) {
+        window.plannerState.detectedFestivals = festRes.detected_festivals;
+      }
+    } catch (e) {
+      console.warn("Real-time sensing request error:", e);
+    }
+
+    store.setState({});
+  }, 250);
+};
+
+window.triggerDateChangeCheck = function () {
+  window.triggerRealtimePlacesSensing();
+};
+
+window.setPackageType = function (type) {
+  window.plannerState.packageType = type;
+  store.setState({});
+};
+
+window.toggleDistrictSelector = async function () {
+  window.plannerState.isDistrictSelectorOpen = !window.plannerState.isDistrictSelectorOpen;
+  if (window.plannerState.isDistrictSelectorOpen && (!window.plannerState.loadedDistrictsList || window.plannerState.loadedDistrictsList.length === 0)) {
+    try {
+      const res = await api.getDistricts({ limit: 18 });
+      if (res && res.districts) {
+        window.plannerState.loadedDistrictsList = res.districts;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch initial districts list:", e);
+    }
+  }
+  store.setState({});
+};
+
+window.selectCustomDistrictByName = async function (districtName, stateName) {
+  let placesList = [];
+  let foundDistrict = null;
+
+  try {
+    const res = await api.getDistricts({ search: districtName, limit: 1 });
+    if (res && res.districts && res.districts.length > 0) {
+      foundDistrict = res.districts[0];
+      const d = foundDistrict;
+      if (d.tourist_places && Array.isArray(d.tourist_places)) {
+        d.tourist_places.forEach(p => placesList.push({ name: p, category: "Sightseeing", icon: "camera", desc: `Top-rated attraction in ${d.name}` }));
+      }
+      if (d.heritage_places && Array.isArray(d.heritage_places)) {
+        d.heritage_places.forEach(p => placesList.push({ name: p, category: "Heritage", icon: "shield", desc: `Historic monument in ${d.name}` }));
+      }
+      if (d.religious_places && Array.isArray(d.religious_places)) {
+        d.religious_places.forEach(p => placesList.push({ name: p, category: "Spiritual", icon: "flame", desc: `Spiritual site in ${d.name}` }));
+      }
+      if (d.adventure_activities && Array.isArray(d.adventure_activities)) {
+        d.adventure_activities.forEach(p => placesList.push({ name: p, category: "Adventure", icon: "compass", desc: `Adventure activity in ${d.name}` }));
+      }
+    }
+  } catch (e) {
+    console.warn("Error resolving custom district places:", e);
+  }
+
+  window.plannerSelectedDest = districtName;
+  window.plannerState.selectedDistrict = foundDistrict || { name: districtName, state: stateName };
+  window.plannerState.isDistrictSelectorOpen = false;
+
+  if (placesList.length > 0) {
+    window.plannerState.activeDistrictLandmarks = placesList;
+    window.plannerState.selectedPlaces = placesList.slice(0, 3).map(l => l.name);
+  } else {
+    const destKey = districtName.toLowerCase().split(' ')[0].split('(')[0].trim();
+    const fallback = DEFAULT_LANDMARKS[destKey] || DEFAULT_LANDMARKS["goa"];
+    window.plannerState.activeDistrictLandmarks = fallback;
+    window.plannerState.selectedPlaces = fallback.slice(0, 3).map(l => l.name);
+  }
+
+  window.plannerState.customPlaces = [];
+  window.plannerState.userHasManuallySelectedOperator = false;
+
+  store.setState({});
+  window.triggerRealtimePlacesSensing();
+  store.addToast(`Selected district: ${districtName} (${stateName || 'India'})`, 'success');
+};
+
+window.selectCustomDistrict = function (districtName, stateName) {
+  window.selectCustomDistrictByName(districtName, stateName);
+};
+
+let districtDebounce = null;
+window.filterDistrictsDirectory = function () {
+  clearTimeout(districtDebounce);
+  districtDebounce = setTimeout(async () => {
+    const searchInput = document.getElementById('district-search-input');
+    const stateFilter = document.getElementById('district-state-filter');
+    const terrainFilter = document.getElementById('district-terrain-filter');
+    const container = document.getElementById('district-results-container');
+
+    const query = searchInput ? searchInput.value.trim() : '';
+    const stateVal = stateFilter ? stateFilter.value : 'all';
+    const terrainVal = terrainFilter ? terrainFilter.value : 'all';
+
+    window.plannerState.districtSearchQuery = query;
+    window.plannerState.districtStateFilter = stateVal;
+    window.plannerState.districtTerrainFilter = terrainVal;
+
+    const params = { limit: 21 };
+    if (query) params.search = query;
+    if (stateVal && stateVal !== 'all') params.state = stateVal;
+    if (terrainVal && terrainVal !== 'all') params.terrain = terrainVal;
+
+    try {
+      if (container) {
+        container.innerHTML = `
+          <div class="col-span-full py-8 text-center text-xs text-slate-400 flex items-center justify-center space-x-2">
+            <i data-lucide="loader" class="w-4 h-4 animate-spin text-teal-500"></i>
+            <span>Searching 802 Indian districts intelligence database...</span>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      const res = await api.getDistricts(params);
+      if (res && res.districts) {
+        window.plannerState.loadedDistrictsList = res.districts;
+        if (container) {
+          if (res.districts.length === 0) {
+            container.innerHTML = `
+              <div class="col-span-full py-8 text-center text-xs text-slate-400">
+                No matching districts found for "${query || stateVal}". Try another state or search term.
+              </div>
+            `;
+          } else {
+            container.innerHTML = res.districts.map(dist => `
+              <div 
+                onclick="window.selectCustomDistrictByName('${dist.name.replace(/'/g, "\\'")}', '${dist.state.replace(/'/g, "\\'")}')" 
+                class="cursor-pointer p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-500 hover:shadow-md transition text-left space-y-1.5 group">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">${dist.name}</div>
+                    <div class="text-[10px] text-slate-400">${dist.state} - <span class="font-mono">${dist.district_code || ''}</span></div>
+                  </div>
+                  <span class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/20 shrink-0">
+                    ${dist.popular_season || 'Year-round'}
+                  </span>
+                </div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                  ${dist.terrain || 'Explore authentic regional experiences'}
+                </div>
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[10px]">
+                  <span class="text-teal-600 dark:text-teal-400 font-bold group-hover:underline flex items-center space-x-1">
+                    <span>Select & Plan</span>
+                    <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                  </span>
+                  <span class="text-slate-400">${(dist.tourist_places && dist.tourist_places.length) || 4}+ Sensed Spots</span>
+                </div>
+              </div>
+            `).join('');
+          }
+          if (window.lucide) window.lucide.createIcons();
+        }
+      }
+    } catch (e) {
+      console.warn("District search error:", e);
+    }
+  }, 250);
+};
+
+window.onPlannerDestChange = function (destName) {
+  window.plannerSelectedDest = destName;
+  window.plannerState.selectedDistrict = null;
+  window.plannerState.activeDistrictLandmarks = null;
+
+  const destKey = destName.toLowerCase().split(' ')[0].split('(')[0].trim();
+  const landmarks = DEFAULT_LANDMARKS[destKey] || DEFAULT_LANDMARKS["goa"];
+
+  window.plannerState.selectedPlaces = landmarks.slice(0, 3).map(l => l.name);
+  window.plannerState.customPlaces = [];
+  window.plannerState.userHasManuallySelectedOperator = false;
+
+  store.setState({});
+  window.triggerRealtimePlacesSensing();
+};
+
+window.togglePlannerPlace = function (placeName) {
+  const list = window.plannerState.selectedPlaces;
+  const idx = list.indexOf(placeName);
+  if (idx >= 0) {
+    list.splice(idx, 1);
+  } else {
+    list.push(placeName);
+  }
+  window.triggerRealtimePlacesSensing();
+};
+
+window.addCustomPlace = function () {
+  const input = document.getElementById('custom-place-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val && !window.plannerState.customPlaces.includes(val)) {
+    window.plannerState.customPlaces.push(val);
+    input.value = '';
+    window.triggerRealtimePlacesSensing();
+  }
+};
+
+window.removeCustomPlace = function (index) {
+  window.plannerState.customPlaces.splice(index, 1);
+  window.triggerRealtimePlacesSensing();
+};
+
+window.toggleOperatorsDrawer = function () {
+  window.plannerState.isOperatorsDrawerOpen = !window.plannerState.isOperatorsDrawerOpen;
+  store.setState({});
+};
+
+window.selectPlannerOperator = function (operatorId) {
+  window.plannerState.selectedOperatorId = operatorId;
+  window.plannerState.userHasManuallySelectedOperator = true;
+  window.plannerState.isOperatorsDrawerOpen = false;
+
+  const chosenOp = (window.plannerState.matchedOperators || []).find(op => op.id === operatorId);
+  store.addToast(`Assigned ${chosenOp ? chosenOp.name : 'Operator'} to your trip!`, 'success');
+  store.setState({});
+};
+
+window.resetToAIRecommendedOperator = function () {
+  window.plannerState.userHasManuallySelectedOperator = false;
+  const topOp = (window.plannerState.matchedOperators || []).find(op => op.is_recommended) || (window.plannerState.matchedOperators || [])[0];
+  if (topOp) {
+    window.plannerState.selectedOperatorId = topOp.id;
+    store.addToast(`Reset to AI Top Recommended Operator: ${topOp.name}`, 'info');
+  }
+  store.setState({});
+};
+
+window.filterOperatorsSearch = function (query) {
+  window.plannerState.operatorSearchQuery = query;
+  store.setState({});
+};
+
+window.openOperatorDetailModal = function (operatorId) {
+  const op = (window.plannerState.matchedOperators || []).find(o => o.id === operatorId);
+  if (op) {
+    store.setState({ selectedOperatorForModal: op });
+  }
+};
+
+window.closeOperatorDetailModal = function () {
+  store.setState({ selectedOperatorForModal: null });
+};

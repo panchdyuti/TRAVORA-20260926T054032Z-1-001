@@ -1,0 +1,609 @@
+import { store } from '../store.js';
+
+let trackerLeafletMap = null;
+let trackerVehicleMarker = null;
+
+export function renderTripTracker() {
+  const state = store.getState();
+  
+  // Resolve tour from currentTour, or user's first tour, or fallback to an active demo journey
+  let tour = state.currentTour;
+  if (!tour && state.tours && state.tours.length > 0) {
+    tour = state.tours[0];
+  }
+
+  // Fallback demo tour if user hasn't planned one yet, ensuring tracker is always rich & interactive
+  if (!tour) {
+    tour = {
+      id: 991,
+      code: "TRV-LIVE-802",
+      title: "North Goa Coastal & Island Expedition",
+      duration_days: 4,
+      travelers_count: 2,
+      destination_name: "North Goa",
+      destination_lat: 15.5494,
+      destination_lng: 73.7535,
+      coordinator_name: "Aarav Mehta (24x7 Goa Operations)",
+      operator_phone: "+91 98200 11223",
+      operator_name: "Goa Coastal Expeditions & Watersports",
+      status: "in_progress",
+      itinerary_items: [
+        {
+          id: 101,
+          day_number: 2,
+          order_index: 1,
+          title: "Luxury Hotel Departure & Morning Briefing",
+          subtitle: "Vehicle boarding with air-conditioned luxury fleet",
+          time_start: "08:30 AM",
+          time_end: "09:15 AM",
+          cost: 0,
+          location_name: "Hotel Paradise Goa",
+          lat: 15.5350,
+          lng: 73.7600,
+          icon: "hotel"
+        },
+        {
+          id: 102,
+          day_number: 2,
+          order_index: 2,
+          title: "Calangute Watersports Hub & Jet Ski Safari",
+          subtitle: "Parasailing, Jet Ski rides & Dolphin Spotting",
+          time_start: "09:45 AM",
+          time_end: "01:00 PM",
+          cost: 2400,
+          location_name: "Calangute Beach Watersports Centre",
+          lat: 15.5440,
+          lng: 73.7550,
+          icon: "waves"
+        },
+        {
+          id: 103,
+          day_number: 2,
+          order_index: 3,
+          title: "Portuguese Spice Shack Authentic Seafood Lunch",
+          subtitle: "Traditional Goan fish curry, Karimeen fry & fresh coconut water",
+          time_start: "01:30 PM",
+          time_end: "03:00 PM",
+          cost: 1600,
+          location_name: "Souza Lobo Heritage Shack",
+          lat: 15.5494,
+          lng: 73.7535,
+          icon: "utensils"
+        },
+        {
+          id: 104,
+          day_number: 2,
+          order_index: 4,
+          title: "Fort Aguada & 17th-Century Portuguese Lighthouse",
+          subtitle: "Colonial ramparts, Arabian Sea panoramic sunset vista",
+          time_start: "04:00 PM",
+          time_end: "06:30 PM",
+          cost: 500,
+          location_name: "Sinquerim Coastal Bastion",
+          lat: 15.4925,
+          lng: 73.7736,
+          icon: "shield"
+        },
+        {
+          id: 105,
+          day_number: 2,
+          order_index: 5,
+          title: "Mandovi River Starlight Dinner Cruise",
+          subtitle: "Live Goan folk music, DJ deck & riverside dinner",
+          time_start: "07:30 PM",
+          time_end: "10:00 PM",
+          cost: 3200,
+          location_name: "Panaji Ferry Terminal",
+          lat: 15.4989,
+          lng: 73.8278,
+          icon: "anchor"
+        }
+      ]
+    };
+  }
+
+  const items = (tour.itinerary_items && tour.itinerary_items.length > 0)
+    ? tour.itinerary_items
+    : [
+        { title: "Morning Departure & Transit", time_start: "08:30 AM", time_end: "09:30 AM", location_name: "Departure Hub", lat: 15.535, lng: 73.760 },
+        { title: "Regional Attraction Highlight", time_start: "10:00 AM", time_end: "01:00 PM", location_name: "Attraction Center", lat: 15.544, lng: 73.755 },
+        { title: "Heritage Sightseeing & Walk", time_start: "03:30 PM", time_end: "06:30 PM", location_name: "Heritage Monument", lat: 15.492, lng: 73.773 }
+      ];
+
+  // Active simulated stop index for interactive progression
+  if (typeof window.trackerSimulatedStopIndex === 'undefined') {
+    window.trackerSimulatedStopIndex = 1; // 0-indexed; 1 = 2nd stop (current)
+  }
+  const activeIdx = Math.min(window.trackerSimulatedStopIndex, items.length - 1);
+  const currentItem = items[activeIdx];
+  const nextItem = items[activeIdx + 1] || null;
+
+  // Driver and vehicle mock telemetry
+  const telemetry = {
+    vehicleName: "Mercedes-Benz Sprinter AC Luxury",
+    vehicleReg: "GA-03-AA-9988",
+    driverName: "Rajesh Sawant",
+    driverPhone: "+91 98221 44556",
+    driverRating: 4.9,
+    driverTrips: 342,
+    speedKmH: 48,
+    fuelBatteryPct: 86,
+    cabinTemp: "21°C",
+    gpsSats: 14,
+    distanceToNext: "2.4 km",
+    etaMinutes: 8
+  };
+
+  // Schedule map rendering right after HTML insertion
+  setTimeout(() => {
+    window.initTrackerMap(tour, items, activeIdx);
+  }, 100);
+
+  return `
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
+      
+      <!-- TOP HEADER: LIVE TELEMETRY STATUS & CONTROLS -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center space-x-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span>LIVE SATELLITE TELEMETRY ACTIVE</span>
+            </span>
+            <span class="text-xs font-mono text-slate-400">
+              Trip Code: <strong>${tour.code || 'TRV-LIVE-802'}</strong>
+            </span>
+            <span class="text-xs font-bold text-teal-600 dark:text-teal-400">
+              - Day 2 of ${tour.duration_days || 4}
+            </span>
+          </div>
+
+          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight flex items-center space-x-2">
+            <span>${tour.title}</span>
+          </h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Real-time GPS vehicle tracking, on-ground driver cockpit, automated milestone progression, and dynamic disruption radar.
+          </p>
+        </div>
+
+        <!-- RIGHT ACTIONS: TOUR SWITCHER & EMERGENCY SOS -->
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          
+          ${(state.tours && state.tours.length > 1) ? }`
+            <select 
+              onchange="window.switchTrackerTour(this.value)"
+              class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500">
+              ${state.tours.map(t => `<option value="${t.id}" ${t.id === tour.id ? 'selected' : ''}>${t.title.slice(0, 26)}...</option>}`).join('')}
+            </select>
+          ` : ''}
+
+          <!-- ADVANCE STOP SIMULATOR BUTTON -->
+          <button 
+            type="button" 
+            onclick="window.advanceTrackerSimulatedStop(${items.length})"
+            class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-md shadow-teal-500/20 transition flex items-center space-x-1.5 hover:-translate-y-0.5">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Simulate Next Stop</span>
+          </button>
+
+          <!-- EMERGENCY HOTLINE BUTTON -->
+          <a 
+            href="tel:${tour.operator_phone || '+919820011223'}"
+            class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shadow-red-500/20 transition flex items-center space-x-1.5 hover:-translate-y-0.5">
+            <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+            <span>24x7 Coordinator SOS</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- MAIN TELEMETRY GRID: MAP + VEHICLE COCKPIT -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT: LEAFLET INTERACTIVE SATELLITE MAP (7 COLS) -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="surface-card bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <i data-lucide="map" class="w-4 h-4"></i>
+                </div>
+                <span class="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                  Live GPS Route & Transit Radar
+                </span>
+              </div>
+              <div class="flex items-center space-x-2 font-mono text-[10px] text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>Lock: 15.5494° N, 73.7535° E</span>
+              </div>
+            </div>
+
+            <!-- LEAFLET MAP CONTAINER -->
+            <div 
+              id="tracker-leaflet-map" 
+              class="w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 relative z-0">
+            </div>
+
+            <!-- MAP SUB-BAR: LIVE SENSORS -->
+            <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+              <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Speedometer</div>
+                <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white font-mono flex items-center justify-center space-x-1">
+                  <span>${telemetry.speedKmH}</span>
+                  <span class="text-[9px] text-slate-400 font-sans">km/h</span>
+                </div>
+              </div>
+              <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Dist. to Next Stop</div>
+                <div class="text-xs sm:text-sm font-black text-teal-600 dark:text-teal-400 font-mono">
+                  ${telemetry.distanceToNext} (~${telemetry.etaMinutes}m)
+                </div>
+              </div>
+              <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Route Status</div>
+                <div class="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 flex items-center justify-center space-x-1">
+                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                  <span>Clear Trail</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- WEATHER & REGIONAL TELEMETRY RADAR -->
+          <div class="p-4 sm:p-5 rounded-3xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div>
+              <span class="text-[10px] text-slate-400 block font-bold uppercase">Destination Climate</span>
+              <span class="font-extrabold text-slate-800 dark:text-slate-200 text-xs sm:text-sm flex items-center justify-center space-x-1 mt-0.5">
+                <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span>28°C Pleasant</span>
+              </span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block font-bold uppercase">Air Quality (AQI)</span>
+              <span class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm mt-0.5 block font-mono">
+                AQI 38 (Pristine)
+              </span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block font-bold uppercase">Corridor Traffic</span>
+              <span class="font-extrabold text-teal-600 dark:text-teal-400 text-xs sm:text-sm mt-0.5 block">
+                Green Corridor
+              </span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block font-bold uppercase">Monsoon/Disruption</span>
+              <span class="font-extrabold text-slate-800 dark:text-slate-200 text-xs sm:text-sm mt-0.5 block">
+                0 Alerts (Optimal)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: LIVE CURRENT ACTIVITY & DRIVER COCKPIT (5 COLS) -->
+        <div class="lg:col-span-5 space-y-4">
+          
+          <!-- CURRENT ACTIVE STOP HERO CARD -->
+          <div class="p-6 rounded-3xl surface-card border-2 border-teal-500/50 shadow-2xl relative overflow-hidden bg-gradient-to-br from-teal-500/5 via-slate-50 to-white dark:from-teal-950/20 dark:via-slate-900 dark:to-slate-900 space-y-4">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2 text-teal-600 dark:text-teal-400 text-xs font-black uppercase tracking-wider">
+                <span class="w-2.5 h-2.5 rounded-full bg-teal-500 animate-ping"></span>
+                <span>Active Scheduled Milestone (${activeIdx + 1}/${items.length})</span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
+                ${currentItem.time_start || '10:00 AM'} - ${currentItem.time_end || '01:00 PM'}
+              </span>
+            </div>
+
+            <div>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                ${currentItem.title}
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center space-x-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-teal-500 shrink-0"></i>
+                <span>${currentItem.subtitle || currentItem.location_name || 'Designated Destination Landmark'}</span>
+              </p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="text-slate-500 dark:text-slate-400">
+                Next: <strong class="text-slate-800 dark:text-slate-200">${nextItem ? nextItem.title.slice(0, 24) + '...' : 'Hotel Return & Relaxation'}</strong>
+              </span>
+              <button 
+                onclick="window.navigateView('itinerary')"
+                class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition text-xs flex items-center space-x-1">
+                <span>Full Schedule</span>
+                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- DRIVER & ON-GROUND FLEET COCKPIT -->
+          <div class="p-5 rounded-3xl surface-card border border-slate-200 dark:border-slate-800 shadow-lg space-y-4">
+            
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+                <i data-lucide="truck" class="w-4 h-4 text-teal-500"></i>
+                <span>Assigned Fleet & Chauffeur</span>
+              </span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold">
+                COMMERCIAL PERMIT VERIFIED
+              </span>
+            </div>
+
+            <div class="flex items-center space-x-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-teal-500 p-[2px] shadow-md shrink-0">
+                <div class="w-full h-full rounded-[14px] bg-slate-950 text-white flex items-center justify-center font-black text-sm">
+                  RS
+                </div>
+              </div>
+              <div class="space-y-0.5">
+                <div class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                  <span>${telemetry.driverName}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center space-x-1">
+                    <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-500 text-amber-500"></i>
+                    <span>${telemetry.driverRating} (${telemetry.driverTrips} Tours)</span>
+                  </span>
+                </div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">
+                  ${telemetry.vehicleName} - <span class="font-mono font-bold">${telemetry.vehicleReg}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+              <a 
+                href="tel:${telemetry.driverPhone}" 
+                class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+                <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                <span>Call Chauffeur</span>
+              </a>
+              <button 
+                type="button" 
+                onclick="window.openCoordinatorChatModal()" 
+                class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="message-square" class="w-3.5 h-3.5 text-teal-500"></i>
+                <span>Direct WhatsApp</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- DIGITAL STAY & HOTEL VOUCHER CARD -->
+          <div class="p-5 rounded-3xl surface-card border border-slate-200 dark:border-slate-800 shadow-lg space-y-3">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
+              <span class="flex items-center space-x-1.5">
+                <i data-lucide="hotel" class="w-4 h-4 text-indigo-500"></i>
+                <span>Confirmed Stay Voucher</span>
+              </span>
+              <span class="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">DIGITAL PASS READY</span>
+            </div>
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white text-sm">
+                Hotel Paradise Resort & Spa (3-Star Deluxe)
+              </div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                Booking Reference: #BK-TRV-1024-99 - Check-In: 04:30 PM
+              </div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/50 dark:border-indigo-900/50 flex items-center justify-between text-[11px]">
+              <span class="text-indigo-700 dark:text-indigo-300 font-semibold">
+                Show QR Code at Reception for instant keyless entry
+              </span>
+              <button 
+                onclick="window.openStayVoucherModal()" 
+                class="px-2 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[10px]">
+                Show QR
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- FULL DAY PROGRESS TIMELINE: STEP-BY-STEP ITINERARY -->
+      <div class="surface-card bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-5">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div>
+            <h3 class="text-lg font-black text-slate-900 dark:text-white">
+              Day 2 Milestone Progress Trail
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Interactive timeline synced with on-ground vehicle transit
+            </p>
+          </div>
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-600 dark:text-slate-300">
+              ${activeIdx} of ${items.length} Completed
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          ${items.map((it, idx) => {
+            const isDone = idx < activeIdx;
+            const isCurrent = idx === activeIdx;
+            const isUpcoming = idx > activeIdx;
+
+            return }`
+              <div 
+                onclick="window.selectSimulatedMilestone(${idx})"
+                class="cursor-pointer p-4 rounded-2xl border ${isCurrent ? 'border-teal-500 bg-teal-500/10 dark:bg-teal-950/30 ring-2 ring-teal-500/20 shadow-md' : isDone ? 'border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-950/10' : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 opacity-80'} transition space-y-2 group">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-mono font-bold text-[11px] ${isCurrent ? 'text-teal-600 dark:text-teal-400' : isDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">
+                    ${it.time_start || '09:00 AM'} - ${it.time_end || '12:00 PM'}
+                  </span>
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isCurrent ? 'bg-teal-500 text-white animate-pulse' : isDone ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}">
+                    ${isCurrent ? 'CURRENT STOP' : isDone ? 'COMPLETED' : 'UPCOMING'}
+                  </span>
+                </div>
+                
+                <div>
+                  <div class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white group-hover:text-teal-600 transition">
+                    ${it.title}
+                  </div>
+                  <div class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                    ${it.subtitle || it.location_name || ''}
+                  </div>
+                </div>
+
+                <div class="pt-1.5 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400">
+                  <span class="flex items-center space-x-1">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-teal-500"></i>
+                    <span>${it.location_name ? it.location_name.slice(0, 20) : 'Milestone'}</span>
+                  </span>
+                  <span class="font-mono font-bold text-slate-600 dark:text-slate-300">
+                    ${it.cost ? `Rs ${it.cost}` : 'Included'}
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+      </div>
+
+      <!-- COMPLETE JOURNEY & REVIEW BANNER -->
+      <div class="p-6 rounded-3xl bg-gradient-to-r from-teal-500/10 via-amber-500/10 to-teal-500/10 border border-teal-500/30 text-center space-y-3">
+        <h3 class="font-black text-base text-slate-900 dark:text-white">
+          Completed Today's Adventure?
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          Share your feedback on vehicle comfort, driver responsiveness, coordinator assistance, and tour pacing.
+        </p>
+        <button 
+          onclick="window.openReviewModal(${tour.id || 1})" 
+          class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-teal-500/25 transition hover:-translate-y-0.5">
+          Submit Trip Review & Driver Rating
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+// Interactive Leaflet Map for Live Tracker
+window.initTrackerMap = function (tour, items = [], activeIdx = 0) {
+  const mapEl = document.getElementById('tracker-leaflet-map');
+  if (!mapEl || !window.L) return;
+
+  if (trackerLeafletMap) {
+    trackerLeafletMap.remove();
+    trackerLeafletMap = null;
+  }
+
+  const baseLat = (items[activeIdx] && items[activeIdx].lat) ? items[activeIdx].lat : (tour.destination_lat || 15.5494);
+  const baseLng = (items[activeIdx] && items[activeIdx].lng) ? items[activeIdx].lng : (tour.destination_lng || 73.7535);
+
+  trackerLeafletMap = window.L.map('tracker-leaflet-map', {
+    zoomControl: true,
+    attributionControl: false
+  }).setView([baseLat, baseLng], 13);
+
+  // Modern CartoDB / OSM clean tiles
+  window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18
+  }).addTo(trackerLeafletMap);
+
+  const points = [];
+
+  // Plot milestone stops
+  items.forEach((it, idx) => {
+    const lat = it.lat || (baseLat + (idx * 0.012));
+    const lng = it.lng || (baseLng + (idx * 0.010));
+    points.push([lat, lng]);
+
+    const isCurrent = idx === activeIdx;
+    const isCompleted = idx < activeIdx;
+
+    if (isCurrent) {
+      // VEHICLE RADAR MARKER
+      const vehicleHtml = `
+        <div class="vehicle-radar-marker">
+          <div class="marker-radar-wave"></div>
+          <div class="marker-icon-box">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
+            </svg>
+          </div>
+        </div>
+      `;
+      const icon = window.L.divIcon({
+        className: 'custom-vehicle-radar',
+        html: vehicleHtml,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+      trackerVehicleMarker = window.L.marker([lat, lng], { icon: icon }).addTo(trackerLeafletMap);
+      trackerVehicleMarker.bindPopup(`
+        <div class="p-1 text-xs">
+          <strong class="text-teal-600 block text-sm">Active Stop #${idx + 1}: ${it.title}</strong>
+          <span class="text-slate-500">${it.location_name || 'En Route'} - Speed: 48 km/h</span>
+        </div>
+      `).openPopup();
+    } else {
+      // Standard Stop Marker
+      const stopHtml = `
+        <div class="stop-pin-marker ${isCompleted ? 'completed' : ''}">
+          ${isCompleted ? '<svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : idx + 1}
+        </div>
+      `;
+      const icon = window.L.divIcon({
+        className: 'custom-stop-marker',
+        html: stopHtml,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      const marker = window.L.marker([lat, lng], { icon: icon }).addTo(trackerLeafletMap);
+      marker.bindPopup(`
+        <div class="p-1 text-xs">
+          <strong class="block">${it.title}</strong>
+          <span class="text-slate-400">${it.time_start} - ${it.time_end}</span>
+        </div>
+      `);
+    }
+  });
+
+  if (points.length > 1) {
+    const route = window.L.polyline(points, {
+      color: '#0d9488',
+      weight: 4,
+      opacity: 0.85,
+      dashArray: '8, 8'
+    }).addTo(trackerLeafletMap);
+    trackerLeafletMap.fitBounds(route.getBounds(), { padding: [40, 40] });
+  }
+};
+
+window.advanceTrackerSimulatedStop = function (totalStops) {
+  if (typeof window.trackerSimulatedStopIndex === 'undefined') {
+    window.trackerSimulatedStopIndex = 1;
+  }
+  window.trackerSimulatedStopIndex = (window.trackerSimulatedStopIndex + 1) % totalStops;
+  store.setState({});
+  store.addToast(`Vehicle dispatched to Milestone #${window.trackerSimulatedStopIndex + 1}!`, 'success');
+};
+
+window.selectSimulatedMilestone = function (idx) {
+  window.trackerSimulatedStopIndex = idx;
+  store.setState({});
+  store.addToast(`Focused on Milestone #${idx + 1}`, 'info');
+};
+
+window.switchTrackerTour = function (tourId) {
+  const targetId = parseInt(tourId);
+  store.navigate('tracker', { tour_id: targetId });
+  store.addToast('Switched active tracking tour', 'info');
+};
+
+window.openStayVoucherModal = function () {
+  alert("DIGITAL PASS #BK-TRV-1024-99\nHotel Paradise Resort & Spa\nRoom: 3-Star Deluxe Ocean View\nDigital Key Code: 8902-TRV\nStatus: Checked In & Ready");
+};
+
+window.openCoordinatorChatModal = function () {
+  store.addToast("Connected with Rajesh Sawant via Direct Driver Telemetry Hotline", "success");
+};

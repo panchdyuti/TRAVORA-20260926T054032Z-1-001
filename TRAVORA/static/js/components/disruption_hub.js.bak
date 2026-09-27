@@ -1,0 +1,220 @@
+import { store } from '../store.js';
+import { api } from '../api.js';
+
+export function renderDisruptionModal() {
+  const state = store.getState();
+  if (!state.isDisruptionModalOpen) return '';
+
+  const tour = state.currentTour;
+  const events = (tour && tour.change_events) ? tour.change_events : [];
+  let activeEvent = null;
+  if (state.activeChangeEventId) {
+    activeEvent = events.find(e => e.id === state.activeChangeEventId);
+  }
+  if (!activeEvent) {
+    activeEvent = events.find(e => e.status === 'pending');
+  }
+
+  if (!activeEvent) {
+    return `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="surface-card rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-emerald-500/30 text-center space-y-5 modal-content">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-8 h-8"></i>
+          </div>
+          <div class="space-y-1.5">
+            <h2 class="text-xl font-extrabold text-slate-900 dark:text-white">
+              All Disruptions Resolved
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              There are no pending changes requiring review. The itinerary and vendor reservations are operating normally with 100% synchronization.
+            </p>
+          </div>
+          <button 
+            onclick="window.closeDisruptionModal()" 
+            class="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-md shadow-teal-500/20 transition">
+            Close Disruption Hub
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  const alternatives = activeEvent.alternatives || [];
+
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+      <div class="surface-card rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-red-200 dark:border-red-900/60 max-h-[90vh] overflow-y-auto space-y-6 modal-content">
+        
+        <!-- HEADER -->
+        <div class="flex items-start justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-2xl bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
+              <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Dynamic Change Detected</span>
+                <span class="px-2 py-0.2 rounded text-[10px] font-bold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">Tour #${tour ? tour.code : 'TR1024'}</span>
+              </div>
+              <h2 class="text-xl font-extrabold text-slate-900 dark:text-white">
+                ${activeEvent.title}
+              </h2>
+            </div>
+          </div>
+          <button onclick="window.closeDisruptionModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- ALERT OPERATOR ACTION (Prompt Requirement 5) -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-500/10 via-amber-500/10 to-red-500/10 border-2 border-red-500/40 dark:border-red-500/60 shadow-lg space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold shrink-0 shadow-md">
+                <i data-lucide="phone-call" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white">Emergency Traveler Support</span>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">Assigned Coordinator: <strong>${tour ? tour.coordinator_name || 'Aarav Mehta' : 'Aarav Mehta'}</strong></span>
+                </div>
+                <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                  Facing Issues? Alert Tour Operator Immediately
+                </h3>
+                <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                  Sends urgent priority alert to operator: <em>"Contact traveller: he/she has an issue."</em> The on-ground team will call or message you right away.
+                </p>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              onclick="window.triggerAlertOperatorForTravellerIssue(${tour ? tour.id : 1})" 
+              class="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition flex items-center justify-center space-x-2 shadow-lg shadow-red-600/30 shrink-0">
+              <i data-lucide="bell" class="w-4 h-4 animate-bounce"></i>
+              <span>Alert Operator</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- IMPACT ANALYSIS SUMMARY -->
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-1.5">
+            <i data-lucide="layers" class="w-4 h-4 text-teal-600 dark:text-teal-400"></i>
+            <span>Multi-Component Impact Analysis</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="text-[10px] text-red-500 font-semibold">Accommodation</div>
+              <div class="font-bold text-slate-800 dark:text-slate-200">${activeEvent.affected_accommodation}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="text-[10px] text-amber-500 font-semibold uppercase tracking-wider">Day 2 Check-in</div>
+              <div class="font-bold text-slate-800 dark:text-slate-200">${activeEvent.affected_checkin}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">Transit Reroute</div>
+              <div class="font-bold text-slate-800 dark:text-slate-200">${activeEvent.affected_transport}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="text-[10px] text-teal-500 font-semibold uppercase tracking-wider">Baseline Variance</div>
+              <div class="font-bold text-slate-800 dark:text-slate-200">+Rs ${activeEvent.cost_delta.toLocaleString('en-IN')}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPLAINABLE 5-FACTOR ALTERNATIVES -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="sparkles" class="w-4 h-4 text-teal-600 dark:text-teal-400"></i>
+              <span>AI Ranked Replacement Options</span>
+            </div>
+            <span class="text-[11px] text-slate-400 font-mono">
+              Score = 30% Pref + 25% Budget + 20% Loc + 15% Avail + 10% Time
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            ${alternatives.map((alt, idx) => }`
+              <div class="p-4 sm:p-5 rounded-2xl border transition ${alt.is_recommended ? 'border-teal-500 bg-teal-50/20 dark:bg-teal-950/20 shadow-lg shadow-teal-500/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'} space-y-3">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl ${alt.is_recommended ? 'bg-teal-500 text-white font-black' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold'} flex items-center justify-center text-sm shadow">
+                      ${alt.overall_score}%
+                    </div>
+                    <div>
+                      <div class="flex items-center space-x-2">
+                        <h4 class="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+                          ${alt.title}
+                        </h4>
+                        ${alt.is_recommended ? `
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-500 text-white flex items-center space-x-1 shadow-sm">
+                            <i data-lucide="star" class="w-3 h-3 fill-white"></i>
+                            <span>BEST MATCH</span>
+                          </span>
+                        ` : ''}
+                      </div>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        ${alt.category} - ${alt.distance_km} km away - ${alt.beach_proximity}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="text-left sm:text-right">
+                    <div class="text-sm font-extrabold ${alt.price_delta > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-500'}">
+                      ${alt.price_delta > 0 ? '+Rs ' + alt.price_delta : (alt.price_delta < 0 ? '-Rs ' + Math.abs(alt.price_delta) : 'Same Price')}
+                    </div>
+                    <div class="text-[10px] text-slate-400">price difference</div>
+                  </div>
+                </div>
+
+                <!-- 5-Factor Score Matrix Pills -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[10px] bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  <div>
+                    <span class="text-slate-400 block">Style Match (30%)</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${alt.preference_match}%</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 block">Budget Fit (25%)</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${alt.budget_match}%</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 block">Location (20%)</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${alt.location_match}%</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 block">Availability (15%)</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${alt.availability_match}%</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 block">Timing (10%)</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${alt.time_match}%</span>
+                  </div>
+                </div>
+
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  ${alt.description}
+                </p>
+
+                <!-- Select / Apply Button -->
+                <div class="pt-1 flex justify-end">
+                  <button 
+                    onclick="window.applyChangeResolution(${activeEvent.id}, ${alt.id})" 
+                    class="px-5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${alt.is_recommended ? 'bg-teal-600 hover:bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200'}">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    <span>${alt.is_recommended ? 'Apply Recommended Alternative' : 'Select This Alternative'}</span>
+                  </button>
+                </div>
+
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}

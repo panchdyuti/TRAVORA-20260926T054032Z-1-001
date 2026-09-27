@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TRAVORA — Mobile 9:16 Studio | Dedicated Mobile Localhost (8001)</title>
+  <meta name="description" content="Dedicated 9:16 mobile viewport simulator and development localhost for TRAVORA AI dynamic tour platform." />
+  <link rel="icon" type="image/png" href="/static/assets/logo/travora_emblem.png" />
+
+  <!-- Google Fonts: Plus Jakarta Sans, Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            travora: {
+              burgundy: '#810B38',
+              cream: '#F1E2D1',
+              sand: '#DCC3AA',
+              wine: '#541A1A',
+              50: '#FDFBF7',
+              500: '#810B38',
+              900: '#2A0C0C',
+              950: '#140308'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Offline Local QRCode Generator -->
+  <script src="/static/js/qrcode.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: radial-gradient(circle at 50% 20%, #1c050f 0%, #0d0207 55%, #050103 100%);
+      color: #F1E2D1;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Ambient studio background grid */
+    .studio-grid {
+      background-image: radial-gradient(rgba(129, 11, 56, 0.22) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* Realistic Titanium Phone Chassis */
+    .phone-chassis {
+      position: relative;
+      background: #11050a;
+      border: 11px solid #2b111a;
+      border-radius: 54px;
+      box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.12),
+        0 0 0 4px #15060d,
+        0 25px 80px -15px rgba(0, 0, 0, 0.9),
+        0 0 60px -10px rgba(129, 11, 56, 0.45);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    /* Outer physical buttons */
+    .phone-btn {
+      position: absolute;
+      background: #3b1723;
+      border-radius: 3px;
+      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.2);
+    }
+    .phone-btn-left-1 { left: -14px; top: 110px; width: 3px; height: 32px; } /* Action button */
+    .phone-btn-left-2 { left: -14px; top: 155px; width: 3px; height: 50px; } /* Vol Up */
+    .phone-btn-left-3 { left: -14px; top: 215px; width: 3px; height: 50px; } /* Vol Down */
+    .phone-btn-right  { right: -14px; top: 160px; width: 3px; height: 75px; } /* Power button */
+
+    /* Glass screen rim highlight */
+    .phone-chassis::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 43px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      background: #000000;
+      border-radius: 24px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Home gesture bar */
+    .home-indicator {
+      width: 135px;
+      height: 4.5px;
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 10px;
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 45;
+      pointer-events: none;
+    }
+
+    /* Screen iframe container */
+    .screen-iframe-wrapper {
+      width: 100%;
+      height: 100%;
+      background: #0d0207;
+      border-radius: 43px;
+      overflow: hidden;
+      position: relative;
+    }
+    .screen-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0d0207;
+      display: block;
+    }
+
+    /* Frameless 9:16 Canvas mode */
+    .frameless-mode {
+      border: 1px solid rgba(129, 11, 56, 0.4) !important;
+      border-radius: 24px !important;
+      box-shadow: 0 20px 50px -10px rgba(0,0,0,0.8), 0 0 35px rgba(129, 11, 56, 0.3) !important;
+    }
+    .frameless-mode .phone-btn,
+    .frameless-mode .dynamic-island-container,
+    .frameless-mode .home-indicator {
+      display: none !important;
+    }
+    .frameless-mode .screen-iframe-wrapper {
+      border-radius: 23px !important;
+    }
+
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #11050a; }
+    ::-webkit-scrollbar-thumb { background: #541A1A; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #810B38; }
+
+    /* Touch cursor ripple effect */
+    .touch-ripple {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(241, 226, 209, 0.35);
+      border: 2px solid rgba(129, 11, 56, 0.6);
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 1;
+      pointer-events: none;
+      animation: touchPing 0.4s ease-out forwards;
+      z-index: 100;
+    }
+    @keyframes touchPing {
+      to {
+        transform: translate(-50%, -50%) scale(1.6);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body class="studio-grid min-h-screen flex flex-col justify-between select-none">
+
+  <!-- ============================================================================== -->
+  <!-- 1. TOP STUDIO HEADER & QUICK LOCALHOST BAR -->
+  <!-- ============================================================================== -->
+  <header class="sticky top-0 z-50 bg-[#16040d]/90 backdrop-blur-xl border-b border-[#541A1A]/50 px-4 py-2.5 shadow-xl">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3">
+        <a href="/" class="flex items-center space-x-2 group">
+          <img src="/static/assets/logo/travora_emblem.png" alt="TRAVORA" class="w-8 h-8 object-contain rounded-lg shadow-sm" />
+          <div class="flex flex-col">
+            <span class="text-white font-extrabold text-sm tracking-tight group-hover:text-amber-300 transition">TRAVORA</span>
+            <span class="text-[9.5px] font-bold text-amber-300 uppercase tracking-widest -mt-0.5">Mobile 9:16 Studio</span>
+          </div>
+        </a>
+
+        <!-- Live Server Status Indicator -->
+        <div class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-bold text-emerald-400">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span id="server-status-label">Port 8001 Active</span>
+        </div>
+
+        <!-- LAN IP Indicator with Quick Copy -->
+        <button 
+          onclick="window.copyLanUrl()" 
+          class="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700 hover:border-amber-400/50 text-[11px] font-mono text-slate-300 transition"
+          title="Click to copy Mobile URL for other devices on your Wi-Fi">
+          <i data-lucide="wifi" class="w-3 h-3 text-amber-400"></i>
+          <span id="lan-url-display">http://localhost:8001</span>
+          <i data-lucide="copy" class="w-3 h-3 text-slate-400"></i>
+        </button>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center space-x-2">
+        
+        <!-- QR Code Button for Physical Phone Testing -->
+        <button 
+          onclick="window.openQrModal()" 
+          class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md transition transform active:scale-95"
+          title="Scan QR Code with your real phone to test on mobile Wi-Fi">
+          <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Phone QR Code</span>
+          <span class="sm:hidden">QR</span>
+        </button>
+
+        <!-- Refresh Mobile Screen Button -->
+        <button 
+          onclick="window.reloadIframe()" 
+          class="p-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-red-500 text-slate-300 hover:text-white transition"
+          title="Reload Mobile Screen">
+          <i data-lucide="rotate-cw" id="reload-icon" class="w-3.5 h-3.5"></i>
+        </button>
+
+        <!-- Switch to Desktop Web Portal (Port 8000) -->
+        <a 
+          href="http://localhost:8000" 
+          target="_blank"
+          class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-[#810B38] hover:bg-[#990d43] border border-[#541A1A] text-white font-bold text-xs shadow-sm transition"
+          title="Open Main Desktop Web Portal on http://localhost:8000">
+          <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Desktop Portal (8000)</span>
+          <i data-lucide="external-link" class="w-2.5 h-2.5 opacity-70"></i>
+        </a>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================================== -->
+  <!-- 2. STUDIO VIEWPORT CONTROLS BAR (PRESETS, ASPECT RATIO, SCALE, ORIENTATION) -->
+  <!-- ============================================================================== -->
+  <div class="bg-[#100309]/80 backdrop-blur-md border-b border-[#541A1A]/30 py-2 px-4 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap text-xs">
+      
+      <!-- Left: Device Preset Selector -->
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 font-bold text-[11px] uppercase tracking-wider hidden sm:inline">Device:</span>
+        <select 
+          id="device-preset-select" 
+          onchange="window.changeDevicePreset(this.value)"
+          class="bg-slate-900/90 border border-[#541A1A] hover:border-amber-400 text-white text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400 transition cursor-pointer">
+          <option value="iphone15pro" selected>📱 iPhone 15 / 16 Pro (393 × 852)</option>
+          <option value="iphone15promax">📱 iPhone 15 Pro Max (430 × 932)</option>
+          <option value="galaxys24">📱 Samsung Galaxy S24 Ultra (412 × 915)</option>
+          <option value="pixel8">📱 Google Pixel 8 Pro (412 × 892)</option>
+          <option value="exact916hd">📐 Exact 9:16 HD (405 × 720)</option>
+          <option value="exact916fhd">📐 Exact 9:16 Full HD (450 × 800)</option>
+          <option value="fluid916">📐 Fluid 9:16 (Auto Height)</option>
+        </select>
+
+        <!-- Current Aspect Ratio Badge -->
+        <span class="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-extrabold text-[10px] tracking-wider uppercase">
+          Ratio 9:16
+        </span>
+      </div>
+
+      <!-- Center: Frame Style & Orientation -->
+      <div class="flex items-center space-x-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        <!-- Bezel Chassis Mode -->
+        <button 
+          id="btn-mode-chassis"
+          onclick="window.setFrameMode('chassis')" 
+          class="px-2.5 py-1 rounded-lg font-bold text-[11px] bg-[#810B38] text-white shadow-xs transition"
+          title="Phone Bezel Frame">
+          📱 Phone Bezel
+        </button>
+        <!-- Frameless 9:16 Mode -->
+        <button 
+          id="btn-mode-frameless"
+          onclick="window.setFrameMode('frameless')" 
+          class="px-2.5 py-1 rounded-lg font-bold text-[11px] text-slate-400 hover:text-white transition"
+          title="Clean 9:16 Canvas without hardware bezel">
+          📐 Pure Canvas
+        </button>
+        <!-- Full Screen Mobile Mode -->
+        <button 
+          id="btn-mode-fullscreen"
+          onclick="window.setFrameMode('fullscreen')" 
+          class="px-2.5 py-1 rounded-lg font-bold text-[11px] text-slate-400 hover:text-white transition"
+          title="Direct Full View">
+          🌐 Full View
+        </button>
+
+        <span class="opacity-20">|</span>
+
+        <!-- Rotate Orientation Button -->
+        <button 
+          onclick="window.toggleOrientation()" 
+          id="btn-orientation"
+          class="flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold text-[11px] text-slate-300 hover:text-white transition"
+          title="Toggle Portrait (9:16) / Landscape (16:9)">
+          <i data-lucide="rotate-ccw" class="w-3 h-3 text-amber-400"></i>
+          <span id="orientation-label">Portrait</span>
+        </button>
+      </div>
+
+      <!-- Right: Zoom / Scale Controls -->
+      <div class="flex items-center space-x-1 text-slate-300">
+        <span class="text-slate-400 text-[11px] font-bold mr-1 hidden lg:inline">Zoom:</span>
+        <button onclick="window.adjustZoom(-0.05)" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 hover:border-amber-400 flex items-center justify-center font-bold text-sm">-</button>
+        <span id="zoom-label" class="px-2 font-mono text-xs text-amber-300 font-bold min-w-[48px] text-center">100%</span>
+        <button onclick="window.adjustZoom(0.05)" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 hover:border-amber-400 flex items-center justify-center font-bold text-sm">+</button>
+        <button onclick="window.setZoomFit()" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-amber-400 text-[10px] font-bold">Fit</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================================== -->
+  <!-- 3. MAIN WORKSPACE: SMARTPHONE SIMULATOR IN 9:16 RATIO -->
+  <!-- ============================================================================== -->
+  <main class="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 overflow-hidden relative">
+    
+    <!-- Ambient glowing backdrop orbs -->
+    <div class="absolute w-[500px] h-[500px] rounded-full bg-[#810B38]/15 blur-[120px] pointer-events-none"></div>
+    <div class="absolute w-[350px] h-[350px] rounded-full bg-amber-500/10 blur-[100px] pointer-events-none -bottom-10 right-10"></div>
+
+    <!-- Scalable Phone Container Wrapper -->
+    <div id="phone-transform-wrapper" class="relative transition-transform duration-300 origin-center flex items-center justify-center">
+      
+      <!-- The Smartphone Frame (Chassis) -->
+      <div id="phone-chassis" class="phone-chassis relative select-none">
+        
+        <!-- Hardware buttons on chassis perimeter -->
+        <div class="phone-btn phone-btn-left-1" title="Action Button"></div>
+        <div class="phone-btn phone-btn-left-2" title="Volume Up"></div>
+        <div class="phone-btn phone-btn-left-3" title="Volume Down"></div>
+        <div class="phone-btn phone-btn-right" title="Side Lock Button"></div>
+
+        <!-- Inner Screen Wrapper -->
+        <div id="screen-wrapper" class="screen-iframe-wrapper">
+          
+          <!-- TOP STATUS BAR & DYNAMIC ISLAND -->
+          <div class="dynamic-island-container absolute top-0 left-0 right-0 z-40 px-6 pt-3 pb-2 flex items-center justify-between text-white text-[12px] font-bold pointer-events-none select-none">
+            
+            <!-- Real-Time Local Time Clock -->
+            <div id="status-clock" class="tracking-tight font-semibold text-[13px] pl-1 font-mono">
+              09:41
+            </div>
+
+            <!-- Dynamic Island Pill -->
+            <div class="dynamic-island flex items-center space-x-2.5 px-3 py-1.5 min-w-[125px] justify-center pointer-events-auto cursor-pointer hover:scale-105 transition" onclick="window.triggerDynamicIslandEasterEgg()" title="TRAVORA Active Island Status">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span id="dynamic-island-text" class="text-[10.5px] font-bold text-slate-200 tracking-tight">TRAVORA Live</span>
+              <div class="w-2.5 h-2.5 rounded-full bg-[#11050a] border border-white/20"></div> <!-- Front camera sensor -->
+            </div>
+
+            <!-- Status Icons: 5G, Wi-Fi, Battery -->
+            <div class="flex items-center space-x-1.5 pr-1 text-slate-300">
+              <span class="text-[10px] font-bold tracking-tighter">5G</span>
+              <i data-lucide="wifi" class="w-3.5 h-3.5 text-white"></i>
+              <!-- Battery Icon with Level -->
+              <div class="flex items-center space-x-0.5 border border-white/70 rounded-[4px] px-0.5 py-0.5 w-5 h-2.5">
+                <div class="bg-emerald-400 h-full w-full rounded-[2px]"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- THE APPLICATION EMBEDDED IFRAME -->
+          <iframe 
+            id="mobile-app-iframe"
+            src="/app?mode=mobile_studio" 
+            title="TRAVORA Mobile 9:16 Viewport"
+            class="screen-iframe"
+            allow="geolocation; camera; microphone; clipboard-write; autoplay">
+          </iframe>
+
+          <!-- BOTTOM HOME GESTURE BAR -->
+          <div class="home-indicator"></div>
+
+        </div>
+      </div>
+      
+    </div>
+
+  </main>
+
+  <!-- ============================================================================== -->
+  <!-- 4. BOTTOM FLOATING STUDIO NAVIGATION DOCK -->
+  <!-- ============================================================================== -->
+  <footer class="sticky bottom-0 z-40 bg-[#16040d]/95 backdrop-blur-xl border-t border-[#541A1A]/40 py-2.5 px-4 shadow-2xl">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 flex-wrap">
+      
+      <!-- Left: Quick Navigation Jumpers into Mobile App -->
+      <div class="flex items-center space-x-1 overflow-x-auto py-1 scrollbar-none">
+        <span class="text-slate-400 font-bold text-[11px] uppercase tracking-wider mr-1 hidden sm:inline">Jump To:</span>
+        
+        <button onclick="window.sendMobileNav('landing')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-slate-200 hover:text-white transition">
+          ✈️ Explore
+        </button>
+        <button onclick="window.sendMobileNav('planner')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-amber-300 hover:text-white transition">
+          ✨ AI Planner
+        </button>
+        <button onclick="window.sendMobileNav('tracker')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-emerald-400 hover:text-white transition">
+          📡 Live Radar
+        </button>
+        <button onclick="window.sendMobileNav('weather_twin')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-blue-400 hover:text-white transition">
+          ⛈️ Weather Twin
+        </button>
+        <button onclick="window.sendMobileCommand('openDistrictCommandModal')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-slate-200 hover:text-white transition">
+          🏛️ 802 Districts
+        </button>
+        <button onclick="window.sendMobileNav('my_bookings')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-slate-200 hover:text-white transition">
+          🎟️ My Bookings
+        </button>
+        <button onclick="window.sendMobileNav('operator_dash')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-slate-200 hover:text-white transition">
+          🏢 Operator
+        </button>
+        <button onclick="window.sendMobileNav('admin_dash')" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-xs font-bold text-purple-300 hover:text-white transition">
+          🛡️ Admin
+        </button>
+      </div>
+
+      <!-- Right: Real Phone Link info -->
+      <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+        <span class="hidden md:inline">Open on phone:</span>
+        <button 
+          onclick="window.openQrModal()"
+          class="text-amber-400 font-bold hover:underline flex items-center space-x-1">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+          <span>Scan Mobile QR</span>
+        </button>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ============================================================================== -->
+  <!-- 5. QR CODE MODAL FOR TESTING ON REAL PHYSICAL PHONE OVER WI-FI -->
+  <!-- ============================================================================== -->
+  <div id="qr-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-[#1a0610] border border-[#810B38] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center relative animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Close Button -->
+      <button 
+        onclick="window.closeQrModal()" 
+        class="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="smartphone" class="w-6 h-6"></i>
+      </div>
+
+      <h3 class="text-lg font-black text-white mb-1">Test on Your Smartphone</h3>
+      <p class="text-xs text-slate-300 mb-5">
+        Scan this QR code with your iPhone Camera or Android QR scanner while connected to the same Wi-Fi network:
+      </p>
+
+      <!-- QR Code Canvas Display -->
+      <div class="bg-white p-4 rounded-2xl inline-block shadow-inner mx-auto mb-4 border border-slate-200">
+        <div id="qrcode-target" class="flex items-center justify-center"></div>
+      </div>
+
+      <!-- LAN URL Display with Copy -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs mb-4">
+        <span id="qr-modal-url" class="font-mono text-amber-300 font-bold select-all truncate pr-2">http://192.168.1.130:8001</span>
+        <button 
+          onclick="window.copyLanUrl()" 
+          class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 flex items-center space-x-1 shadow-sm transition">
+          <i data-lucide="copy" class="w-3 h-3"></i>
+          <span>Copy</span>
+        </button>
+      </div>
+
+      <div class="text-[11px] text-slate-400 leading-relaxed bg-[#100309] p-3 rounded-xl border border-slate-800 text-left">
+        <strong class="text-slate-200">💡 Quick Tip:</strong><br />
+        Make sure your smartphone and PC are connected to the same Wi-Fi router. The page will render at 100% full screen natively on your phone without the desktop frame!
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================================== -->
+  <!-- 6. TOAST CONTAINER -->
+  <!-- ============================================================================== -->
+  <div id="studio-toast-container" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- ============================================================================== -->
+  <!-- 7. STUDIO INTERACTIVE JAVASCRIPT LOGIC -->
+  <!-- ============================================================================== -->
+  <script>
+    // State management
+    const studioState = {
+      preset: 'iphone15pro',
+      width: 393,
+      height: 852,
+      scale: 1.0,
+      orientation: 'portrait', // 'portrait' | 'landscape'
+      frameMode: 'chassis',   // 'chassis' | 'frameless' | 'fullscreen'
+      networkIp: '127.0.0.1',
+      mobilePort: 8001,
+      desktopPort: 8000
+    };
+
+    // Device preset definitions
+    const DEVICE_PRESETS = {
+      iphone15pro:    { name: 'iPhone 15 / 16 Pro', width: 393, height: 852, radius: 54 },
+      iphone15promax: { name: 'iPhone 15 Pro Max',  width: 430, height: 932, radius: 56 },
+      galaxys24:      { name: 'Galaxy S24 Ultra',   width: 412, height: 915, radius: 46 },
+      pixel8:         { name: 'Pixel 8 Pro',        width: 412, height: 892, radius: 50 },
+      exact916hd:     { name: 'Exact 9:16 HD',      width: 405, height: 720, radius: 44 },
+      exact916fhd:    { name: 'Exact 9:16 FHD',     width: 450, height: 800, radius: 48 },
+      fluid916:       { name: 'Fluid 9:16',         width: 410, height: 728, radius: 46 }
+    };
+
+    // Auto-detect if user opens this directly on a real mobile device (< 640px)
+    if (window.innerWidth < 640 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      document.addEventListener('DOMContentLoaded', () => {
+        window.setFrameMode('fullscreen');
+      });
+    }
+
+    // Apply device dimensions to chassis & viewport
+    function applyDimensions() {
+      const chassis = document.getElementById('phone-chassis');
+      const isLandscape = studioState.orientation === 'landscape';
+      
+      let w = isLandscape ? studioState.height : studioState.width;
+      let h = isLandscape ? studioState.width : studioState.height;
+
+      // Handle Fluid 9:16 mode
+      if (studioState.preset === 'fluid916') {
+        const availableHeight = Math.max(600, window.innerHeight - 200);
+        h = availableHeight;
+        w = Math.round(h * (9 / 16));
+      }
+
+      if (studioState.frameMode === 'fullscreen') {
+        chassis.style.width = '100vw';
+        chassis.style.height = 'calc(100vh - 110px)';
+        chassis.style.border = 'none';
+        chassis.style.borderRadius = '0';
+        chassis.style.boxShadow = 'none';
+      } else {
+        chassis.style.width = `${w}px`;
+        chassis.style.height = `${h}px`;
+        const radius = DEVICE_PRESETS[studioState.preset]?.radius || 50;
+        chassis.style.borderRadius = `${radius}px`;
+      }
+
+      applyTransform();
+    }
+
+    // Apply zoom / scale transform
+    function applyTransform() {
+      const wrapper = document.getElementById('phone-transform-wrapper');
+      if (studioState.frameMode === 'fullscreen') {
+        wrapper.style.transform = 'none';
+      } else {
+        wrapper.style.transform = `scale(${studioState.scale})`;
+      }
+      document.getElementById('zoom-label').innerText = `${Math.round(studioState.scale * 100)}%`;
+    }
+
+    // Preset changer
+    window.changeDevicePreset = function(presetKey) {
+      const conf = DEVICE_PRESETS[presetKey];
+      if (!conf) return;
+      studioState.preset = presetKey;
+      studioState.width = conf.width;
+      studioState.height = conf.height;
+      applyDimensions();
+      showToast(`Switched to ${conf.name} (${conf.width}×${conf.height})`);
+    };
+
+    // Frame mode switcher (chassis vs frameless vs fullscreen)
+    window.setFrameMode = function(mode) {
+      studioState.frameMode = mode;
+      const chassis = document.getElementById('phone-chassis');
+      
+      // Update UI active buttons
+      ['chassis', 'frameless', 'fullscreen'].forEach(m => {
+        const btn = document.getElementById(`btn-mode-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] bg-[#810B38] text-white shadow-xs transition";
+          } else {
+            btn.className = "px-2.5 py-1 rounded-lg font-bold text-[11px] text-slate-400 hover:text-white transition";
+          }
+        }
+      });
+
+      if (mode === 'frameless') {
+        chassis.classList.add('frameless-mode');
+      } else {
+        chassis.classList.remove('frameless-mode');
+      }
+
+      applyDimensions();
+      showToast(`View mode: ${mode.toUpperCase()}`);
+    };
+
+    // Toggle orientation (portrait 9:16 vs landscape 16:9)
+    window.toggleOrientation = function() {
+      studioState.orientation = studioState.orientation === 'portrait' ? 'landscape' : 'portrait';
+      const label = document.getElementById('orientation-label');
+      if (label) label.innerText = studioState.orientation === 'portrait' ? 'Portrait (9:16)' : 'Landscape (16:9)';
+      applyDimensions();
+      showToast(`Orientation: ${studioState.orientation.toUpperCase()}`);
+    };
+
+    // Zoom adjustments
+    window.adjustZoom = function(delta) {
+      studioState.scale = Math.min(1.5, Math.max(0.5, +(studioState.scale + delta).toFixed(2)));
+      applyTransform();
+    };
+
+    window.setZoomFit = function() {
+      const availableH = window.innerHeight - 220;
+      const targetH = studioState.orientation === 'landscape' ? studioState.width : studioState.height;
+      studioState.scale = Math.min(1.0, Math.max(0.5, +(availableH / (targetH + 20)).toFixed(2)));
+      applyTransform();
+      showToast(`Fit to screen: ${Math.round(studioState.scale * 100)}%`);
+    };
+
+    // Reload iframe
+    window.reloadIframe = function() {
+      const icon = document.getElementById('reload-icon');
+      if (icon) icon.classList.add('animate-spin');
+      const iframe = document.getElementById('mobile-app-iframe');
+      if (iframe) {
+        iframe.contentWindow.location.reload();
+      }
+      setTimeout(() => {
+        if (icon) icon.classList.remove('animate-spin');
+        showToast('Mobile screen reloaded');
+      }, 600);
+    };
+
+    // Send postMessage to inner TRAVORA iframe
+    window.sendMobileNav = function(viewName) {
+      const iframe = document.getElementById('mobile-app-iframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'TRAVORA_NAVIGATE', view: viewName }, '*');
+        showToast(`Navigated to: ${viewName.replace('_', ' ').toUpperCase()}`);
+      }
+    };
+
+    window.sendMobileCommand = function(cmd) {
+      const iframe = document.getElementById('mobile-app-iframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'TRAVORA_COMMAND', command: cmd }, '*');
+        showToast(`Command triggered: ${cmd}`);
+      }
+    };
+
+    // Live clock in status bar
+    function updateClock() {
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      hours = hours < 10 ? '0' + hours : hours;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      const el = document.getElementById('status-clock');
+      if (el) el.innerText = `${hours}:${minutes}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Dynamic island easter egg status rotation
+    const ISLAND_MESSAGES = [
+      '✈️ TRAVORA Live',
+      '🟢 802 Districts Active',
+      '🎫 6E-204 On Time',
+      '⚡ Digital Twin Ready',
+      '🛡️ Disruption Radar Active'
+    ];
+    let islandIndex = 0;
+    window.triggerDynamicIslandEasterEgg = function() {
+      islandIndex = (islandIndex + 1) % ISLAND_MESSAGES.length;
+      const el = document.getElementById('dynamic-island-text');
+      if (el) el.innerText = ISLAND_MESSAGES[islandIndex];
+    };
+
+    // Fetch network info from backend
+    async function loadNetworkInfo() {
+      try {
+        const res = await fetch('/api/system/network-info');
+        if (res.ok) {
+          const data = await res.json();
+          studioState.networkIp = data.local_ip;
+          studioState.mobilePort = data.mobile_port || 8001;
+          
+          const fullMobileUrl = `http://${data.local_ip}:${studioState.mobilePort}`;
+          
+          const displayEl = document.getElementById('lan-url-display');
+          if (displayEl) displayEl.innerText = fullMobileUrl;
+
+          const modalUrlEl = document.getElementById('qr-modal-url');
+          if (modalUrlEl) modalUrlEl.innerText = fullMobileUrl;
+
+          // Generate offline QR code
+          renderQrCode(fullMobileUrl);
+        }
+      } catch (e) {
+        console.warn('Network info probe failed:', e);
+        const fallbackUrl = `http://localhost:${studioState.mobilePort}`;
+        renderQrCode(fallbackUrl);
+      }
+    }
+
+    // Render QR Code using local qrcode.min.js
+    function renderQrCode(url) {
+      const target = document.getElementById('qrcode-target');
+      if (!target) return;
+      target.innerHTML = '';
+      if (window.QRCode) {
+        new QRCode(target, {
+          text: url,
+          width: 180,
+          height: 180,
+          colorDark: "#15040d",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else {
+        target.innerHTML = `<div class="p-4 text-xs font-mono text-slate-800">QR Engine Ready<br>${url}</div>`;
+      }
+    }
+
+    // QR Code modal triggers
+    window.openQrModal = function() {
+      const modal = document.getElementById('qr-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.closeQrModal = function() {
+      const modal = document.getElementById('qr-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    };
+
+    // Copy LAN URL to clipboard
+    window.copyLanUrl = function() {
+      const url = `http://${studioState.networkIp}:${studioState.mobilePort}`;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast(`Copied ${url} to clipboard!`);
+      }).catch(() => {
+        showToast(`URL: ${url}`);
+      });
+    };
+
+    // Toast notifications
+    function showToast(msg) {
+      const container = document.getElementById('studio-toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'px-4 py-2.5 rounded-2xl bg-[#541A1A] border border-[#810B38] text-white text-xs font-bold shadow-xl animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto flex items-center space-x-2';
+      toast.innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 text-amber-400"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      if (window.lucide) window.lucide.createIcons();
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Initialize on window load
+    window.addEventListener('load', () => {
+      applyDimensions();
+      window.setZoomFit();
+      loadNetworkInfo();
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    window.addEventListener('resize', () => {
+      if (studioState.preset === 'fluid916' || studioState.frameMode === 'fullscreen') {
+        applyDimensions();
+      }
+    });
+  </script>
+
+</body>
+</html>

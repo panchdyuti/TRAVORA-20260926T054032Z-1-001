@@ -1,0 +1,598 @@
+import { store } from '../store.js';
+import { api } from '../api.js';
+
+export function renderProfileModal() {
+  const state = store.getState();
+  if (!state.isProfileModalOpen) return '';
+
+  const user = state.user || {
+    id: 1,
+    name: 'Krishna Singh',
+    email: 'krishna@gmail.com',
+    role: 'traveler',
+    phone: '+91 98765 43210'
+  };
+
+  const activeTab = window.profileModalActiveTab || 'overview'; // 'overview', 'personal', 'bookings', 'trips', 'security'
+  const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U';
+  const role = user.role || 'traveler';
+
+  // Role badges & styling
+  const roleStyles = {
+    traveler: { label: 'VERIFIED TRAVELLER', color: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30', icon: 'compass' },
+    operator: { label: 'CERTIFIED TOUR OPERATOR', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30', icon: 'building-2' },
+    business_operator: { label: 'CORPORATE PARTNER', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30', icon: 'briefcase' },
+    admin: { label: 'PLATFORM ADMINISTRATOR', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30', icon: 'shield-check' }
+  }[role] || { label: 'MEMBER', color: 'bg-teal-500/15 text-teal-700 border-teal-500/30', icon: 'user' };
+
+  // Calculate live user stats from active state
+  const userTours = (state.tours || []).filter(t => !user.id || t.user_id === user.id);
+  const activeToursCount = userTours.filter(t => t.status === 'confirmed' || t.status === 'in_progress').length;
+  const completedToursCount = userTours.filter(t => t.status === 'completed').length || 1;
+  const totalSpend = userTours.reduce((acc, t) => acc + (t.estimated_cost || 18500), 0) || 37000;
+  const rewardMiles = Math.round(totalSpend * 0.08);
+
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-fadeIn">
+      
+      <!-- Backdrop click to close -->
+      <div class="absolute inset-0" onclick="window.closeProfileModal()"></div>
+
+      <div class="relative w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 max-h-[92vh] flex flex-col z-10">
+        
+        <!-- Ambient Decorative Header Banner -->
+        <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-teal-600/25 via-emerald-500/20 to-amber-500/25 pointer-events-none"></div>
+
+        <!-- TOP BAR: PROFILE HERO HEADER -->
+        <div class="relative p-6 sm:p-8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800">
+          
+          <div class="flex items-center space-x-4">
+            <!-- AVATAR CAPSULE WITH GLOW & ONLINE STATUS -->
+            <div class="relative shrink-0">
+              <div class="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-teal-500 via-amber-500 to-emerald-500 p-[3px] shadow-xl shadow-teal-500/20">
+                <div class="w-full h-full rounded-[14px] bg-slate-950 flex items-center justify-center text-2xl font-black text-white tracking-wider">
+                  ${initials}
+                </div>
+              </div>
+              <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 ring-2 ring-emerald-500/40" title="Active Verified Session"></span>
+            </div>
+
+            <!-- NAME & METADATA -->
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  ${user.name || 'User'}
+                </h2>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider border ${roleStyles.color} flex items-center space-x-1">
+                  <i data-lucide="${roleStyles.icon}" class="w-3 h-3"></i>
+                  <span>${roleStyles.label}</span>
+                </span>
+                <span class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <i data-lucide="shield-check" class="w-3 h-3 text-emerald-500"></i>
+                  <span>KYC Verified</span>
+                </span>
+              </div>
+              
+              <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                <span class="flex items-center space-x-1">
+                  <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>${user.email || 'traveler@travora.demo'}</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                  <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>${user.phone || '+91 98765 43210'}</span>
+                </span>
+                <span class="text-[10px] text-teal-600 dark:text-teal-400 font-bold">
+                  ID: #TRV-802-0${user.id || '1'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLOSE BUTTON -->
+          <button 
+            type="button" 
+            onclick="window.closeProfileModal()" 
+            class="self-start sm:self-auto p-2.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            title="Close Account View">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- USER STATS HIGHLIGHT STRIP -->
+        <div class="px-6 sm:px-8 py-3 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+          <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Bookings</div>
+            <div class="text-base sm:text-lg font-black text-teal-600 dark:text-teal-400">${activeToursCount} Active</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Past Expeditions</div>
+            <div class="text-base sm:text-lg font-black text-amber-500">${completedToursCount} Finished</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Bookings</div>
+            <div class="text-base sm:text-lg font-black text-slate-800 dark:text-slate-200 font-mono">Rs ${totalSpend.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Travora Miles</div>
+            <div class="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">${rewardMiles} pts</div>
+          </div>
+        </div>
+
+        <!-- ENHANCED NAVIGATION TABS -->
+        <div class="px-6 sm:px-8 pt-2.5 flex items-center space-x-1 sm:space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+          <button 
+            type="button" 
+            onclick="window.setProfileModalTab('overview')" 
+            class="whitespace-nowrap px-3.5 py-2 text-xs font-bold transition border-b-2 flex items-center space-x-1.5 ${activeTab === 'overview' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            <span>Overview</span>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="window.setProfileModalTab('personal')" 
+            class="whitespace-nowrap px-3.5 py-2 text-xs font-bold transition border-b-2 flex items-center space-x-1.5 ${activeTab === 'personal' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}">
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+            <span>Profile Details</span>
+          </button>
+          
+          <button 
+            type="button" 
+            onclick="window.setProfileModalTab('bookings')" 
+            class="whitespace-nowrap px-3.5 py-2 text-xs font-bold transition border-b-2 flex items-center space-x-1.5 ${activeTab === 'bookings' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}">
+            <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+            <span>Verified Bookings & Invoices</span>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="window.setProfileModalTab('trips')" 
+            class="whitespace-nowrap px-3.5 py-2 text-xs font-bold transition border-b-2 flex items-center space-x-1.5 ${activeTab === 'trips' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}">
+            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+            <span>My Itineraries</span>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="window.setProfileModalTab('security')" 
+            class="whitespace-nowrap px-3.5 py-2 text-xs font-bold transition border-b-2 flex items-center space-x-1.5 ${activeTab === 'security' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+            <span>Security & Passwords</span>
+          </button>
+        </div>
+
+        <!-- TAB CONTENT CONTAINER (SCROLLABLE) -->
+        <div class="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1 text-xs">
+          
+          ${activeTab === 'overview' ? `
+            <!-- TAB 0: ACCOUNT OVERVIEW & IDENTITY -->
+            <div class="space-y-5">
+              
+              <!-- Travel Persona Card -->
+              <div class="p-5 rounded-2xl bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-500/20 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-teal-500"></i>
+                    <span>Traveller Persona & Discovery Preferences</span>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-700 dark:text-teal-300 font-mono">
+                    Tier: Gold Explorer
+                  </span>
+                </div>
+                <p class="text-slate-600 dark:text-slate-300 text-xs">
+                  Your customized travel style leverages multi-factor AI routing to pair you with certified operators across India's 802 administrative districts.
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] text-slate-400 block font-bold">Preferred Style</span>
+                    <span class="font-extrabold text-slate-800 dark:text-slate-200 text-xs">Beach + Adventure</span>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] text-slate-400 block font-bold">Transit Mode</span>
+                    <span class="font-extrabold text-slate-800 dark:text-slate-200 text-xs">Luxury AC Coach</span>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] text-slate-400 block font-bold">Stay Preference</span>
+                    <span class="font-extrabold text-slate-800 dark:text-slate-200 text-xs">3-Star Deluxe</span>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] text-slate-400 block font-bold">Dietary Note</span>
+                    <span class="font-extrabold text-slate-800 dark:text-slate-200 text-xs">Authentic Local</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Jump Actions -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button 
+                  onclick="window.closeProfileModal(); window.navigateView('tracker')"
+                  class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-teal-500 hover:shadow-md transition text-left space-y-1.5 group">
+                  <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <i data-lucide="navigation" class="w-4 h-4"></i>
+                  </div>
+                  <div class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-teal-500 transition">Open Live Tracker</div>
+                  <div class="text-[11px] text-slate-400">View current telemetry, driver and scheduled stop</div>
+                </button>
+
+                <button 
+                  onclick="window.closeProfileModal(); window.navigateView('itinerary')"
+                  class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-teal-500 hover:shadow-md transition text-left space-y-1.5 group">
+                  <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                  </div>
+                  <div class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-teal-500 transition">View Active Itinerary</div>
+                  <div class="text-[11px] text-slate-400">Explore interactive map, daily schedule and vouchers</div>
+                </button>
+
+                <button 
+                  onclick="window.setProfileModalTab('bookings')"
+                  class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-teal-500 hover:shadow-md transition text-left space-y-1.5 group">
+                  <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                  </div>
+                  <div class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-teal-500 transition">Invoices & Receipts</div>
+                  <div class="text-[11px] text-slate-400">Download GST receipts and payment certificates</div>
+                </button>
+              </div>
+
+            </div>
+          ` : activeTab === 'personal' ? `
+            <!-- TAB 1: PERSONAL & PREFERENCES FORM -->
+            <form onsubmit="window.handleSaveProfile(event)" class="space-y-4">
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="block font-bold text-slate-700 dark:text-slate-300">Full Name</label>
+                  <div class="relative">
+                    <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <input 
+                      type="text" 
+                      name="name" 
+                      id="profile-name" 
+                      value="${user.name || ''}" 
+                      class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label class="block font-bold text-slate-700 dark:text-slate-300">Registered Email Address</label>
+                  <div class="relative">
+                    <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      id="profile-email" 
+                      value="${user.email || ''}" 
+                      class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="block font-bold text-slate-700 dark:text-slate-300">Contact Phone Number</label>
+                  <div class="relative">
+                    <i data-lucide="phone" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <input 
+                      type="text" 
+                      name="phone" 
+                      id="profile-phone" 
+                      value="${user.phone || '+91 98765 43210'}" 
+                      class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label class="block font-bold text-slate-700 dark:text-slate-300">Primary Travel Style Preference</label>
+                  <div class="relative">
+                    <i data-lucide="compass" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <select 
+                      name="travel_style"
+                      class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none font-semibold">
+                      <option value="Beach + Adventure + Food" selected>Beach + Adventure + Food</option>
+                      <option value="Heritage + Culture + Leisure">Heritage + Culture + Leisure</option>
+                      <option value="Spiritual + Pilgrimage + Serenity">Spiritual + Pilgrimage + Serenity</option>
+                      <option value="High-Altitude Snow + Trekking">High-Altitude Snow + Trekking</option>
+                      <option value="Wildlife Safari & Nature Expedition">Wildlife Safari & Nature Expedition</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ACTION ROW -->
+              <div class="pt-4 flex items-center justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  type="button" 
+                  onclick="window.closeProfileModal()" 
+                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition">
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  class="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/20 transition flex items-center space-x-1.5">
+                  <i data-lucide="check" class="w-4 h-4"></i>
+                  <span>Save Changes</span>
+                </button>
+              </div>
+
+            </form>
+          ` : activeTab === 'bookings' ? `
+            <!-- TAB 2: VERIFIED BOOKINGS & OFFICIAL RECEIPTS -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <span class="font-extrabold text-sm text-slate-900 dark:text-white">Verified Travel Bookings & Invoices</span>
+                  <p class="text-[11px] text-slate-400">Official GST-compliant travel vouchers and payment receipts</p>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">
+                  Tax Compliant (GSTIN)
+                </span>
+              </div>
+
+              <!-- LIST OF USER TOURS / BOOKINGS -->
+              <div class="space-y-3">
+                ${(userTours && userTours.length > 0) ? userTours.map((t, idx) => `
+                  <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-teal-500/50 transition">
+                    <div class="space-y-1">
+                      <div class="flex items-center space-x-2">
+                        <span class="font-mono font-black text-xs text-slate-900 dark:text-white">${t.code || `TRV-BK-${9020 + idx}`}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${t.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-teal-500/10 text-teal-600 border border-teal-500/20'}">
+                          ${t.status ? t.status.toUpperCase() : 'CONFIRMED & DISPATCHED'}
+                        </span>
+                      </div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-slate-200">
+                        ${t.title}
+                      </div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Paid Rs ${(t.estimated_cost || 25000).toLocaleString('en-IN')} - Dates: ${t.start_date || '2026-09-12'} to ${t.end_date || '2026-09-15'} - Partner: ${t.coordinator_name || 'Certified Operator'}
+                      </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 shrink-0">
+                      <button 
+                        type="button" 
+                        onclick="window.closeProfileModal(); window.navigateView('tracker')" 
+                        class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition flex items-center space-x-1 text-xs shadow-sm">
+                        <i data-lucide="navigation" class="w-3.5 h-3.5 text-emerald-500"></i>
+                        <span>Live Track</span>
+                      </button>
+                      <button 
+                        type="button" 
+                        onclick="window.closeProfileModal(); window.openBookingReceiptModal('${t.code || `TRV-BK-${9020 + idx}`}')" 
+                        class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition flex items-center space-x-1 text-xs shadow-md shadow-teal-500/20">
+                        <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                        <span>Tax Invoice</span>
+                      </button>
+                    </div>
+                  </div>
+                `).join('') : `
+                  <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                    <div class="space-y-1">
+                      <div class="flex items-center space-x-2">
+                        <span class="font-mono font-black text-xs text-slate-900 dark:text-white">TRV-BK-9021</span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          CONFIRMED & DISPATCHED
+                        </span>
+                      </div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-slate-200">
+                        Goa Coastal & Island Expedition
+                      </div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Paid Rs 25,000.00 via UPI - Partner: Goa Coastal Expeditions & Watersports
+                      </div>
+                    </div>
+
+                    <button 
+                      type="button" 
+                      onclick="window.closeProfileModal(); window.openBookingReceiptModal('TRV-BK-9021')" 
+                      class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition flex items-center space-x-1 text-xs shadow-md shadow-teal-500/20">
+                      <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                      <span>View Tax Invoice</span>
+                    </button>
+                  </div>
+                `}
+              </div>
+
+            </div>
+          ` : activeTab === 'trips' ? `
+            <!-- TAB 3: SAVED ITINERARIES -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <span class="font-extrabold text-sm text-slate-900 dark:text-white">Saved Journeys & Planned Itineraries</span>
+                  <p class="text-[11px] text-slate-400">Review your customized multi-day travel schedules</p>
+                </div>
+                <button 
+                  onclick="window.closeProfileModal(); window.navigateView('planner')" 
+                  class="px-3 py-1 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-sm">
+                  + Plan New Trip
+                </button>
+              </div>
+
+              <div class="space-y-3">
+                ${(userTours && userTours.length > 0) ? userTours.map(t => `
+                  <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-teal-500 transition">
+                    <div class="space-y-1">
+                      <div class="font-black text-sm text-slate-900 dark:text-white">${t.title}</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-3 font-mono">
+                        <span>${t.duration_days || 4} Days</span>
+                        <span>-</span>
+                        <span>${t.travelers_count || 2} Travelers</span>
+                        <span>-</span>
+                        <span class="text-teal-600 dark:text-teal-400 font-bold">Rs ${(t.estimated_cost || 25000).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 shrink-0">
+                      <button 
+                        type="button" 
+                        onclick="window.closeProfileModal(); window.navigateView('itinerary', { tour_id: ${t.id} })" 
+                        class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition flex items-center space-x-1 text-xs">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>View Schedule</span>
+                      </button>
+                      <button 
+                        type="button" 
+                        onclick="window.closeProfileModal(); window.navigateView('tracker', { tour_id: ${t.id} })" 
+                        class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition flex items-center space-x-1 text-xs shadow-sm">
+                        <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+                        <span>Live Tracker</span>
+                      </button>
+                    </div>
+                  </div>
+                `).join('') : `
+                  <div class="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 text-center space-y-2">
+                    <i data-lucide="compass" class="w-8 h-8 mx-auto text-slate-400"></i>
+                    <p class="text-xs text-slate-500">No planned itineraries yet. Create your first journey!</p>
+                    <button onclick="window.closeProfileModal(); window.navigateView('planner')" class="px-4 py-2 rounded-xl bg-teal-600 text-white font-bold text-xs">
+                      Plan Your Journey
+                    </button>
+                  </div>
+                `}
+              </div>
+            </div>
+          ` : `
+            <!-- TAB 4: SECURITY & PASSWORDS -->
+            <form onsubmit="window.handleSaveProfile(event)" class="space-y-5">
+              
+              <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-slate-700 dark:text-slate-300 space-y-1">
+                <div class="font-extrabold flex items-center space-x-1.5 text-amber-700 dark:text-amber-400 text-xs">
+                  <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                  <span>Password Security & Multi-Factor Access</span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  Update your access password to protect your bookings, verified GST receipts, and payment credentials.
+                </p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="block font-bold text-slate-700 dark:text-slate-300">New Strong Password</label>
+                  <div class="relative">
+                    <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <input 
+                      type="password" 
+                      name="new_password" 
+                      id="profile-new-password" 
+                      placeholder="Enter new password" 
+                      class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    />
+                    <button 
+                      type="button" 
+                      onclick="window.toggleProfilePasswordVisibility('profile-new-password')" 
+                      class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label class="block font-bold text-slate-700 dark:text-slate-300">Confirm New Password</label>
+                  <div class="relative">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <input 
+                      type="password" 
+                      name="confirm_password" 
+                      id="profile-confirm-password" 
+                      placeholder="Re-enter new password" 
+                      class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    />
+                    <button 
+                      type="button" 
+                      onclick="window.toggleProfilePasswordVisibility('profile-confirm-password')" 
+                      class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Active Session Details -->
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                <span class="font-bold text-slate-700 dark:text-slate-300 block">Active Device Sessions</span>
+                <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
+                    <i data-lucide="monitor" class="w-4 h-4 text-teal-500"></i>
+                    <span>Windows PC - Web Browser (Chrome)</span>
+                  </div>
+                  <span class="text-emerald-500 font-bold font-mono">Current Session - Active Now</span>
+                </div>
+              </div>
+
+              <!-- ACTION ROW -->
+              <div class="pt-2 flex items-center justify-end space-x-2">
+                <button 
+                  type="button" 
+                  onclick="window.closeProfileModal()" 
+                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition">
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  class="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/20 transition flex items-center space-x-1.5">
+                  <i data-lucide="check" class="w-4 h-4"></i>
+                  <span>Update Password</span>
+                </button>
+              </div>
+
+            </form>
+          `}
+
+        </div>
+
+        <!-- FOOTER: SIGN OUT & SOFT DANGER ZONE -->
+        <div class="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          
+          <div class="flex items-center space-x-2">
+            <button 
+              type="button" 
+              onclick="window.closeProfileModal(); window.handleLogout();"
+              class="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold transition flex items-center space-x-1.5 shadow-sm">
+              <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span>Sign Out</span>
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button 
+              type="button" 
+              onclick="window.confirmDeleteAccount()"
+              class="px-3.5 py-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 font-bold transition flex items-center space-x-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Delete Account Permanently</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+// Global UI helper functions for profile modal
+window.setProfileModalTab = function(tabName) {
+  window.profileModalActiveTab = tabName;
+  store.setState({});
+};
+
+window.toggleProfilePasswordVisibility = function(inputId) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+};
+
+window.confirmDeleteAccount = function() {
+  if (confirm("Are you sure you want to permanently delete your TRAVORA account? All trips, bookings, and records will be erased.")) {
+    window.closeProfileModal();
+    window.handleDeleteAccount();
+  }
+};

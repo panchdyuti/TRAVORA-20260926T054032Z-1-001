@@ -1,0 +1,123 @@
+import { store } from '../store.js';
+
+export function renderVendorManagement() {
+  const state = store.getState();
+  const vendors = state.vendors || [
+    {
+      id: 1,
+      name: "Paradise Hospitality Group",
+      category: "Hotels",
+      rating: 4.8,
+      availability: "High (42 Rooms)",
+      price_range: "Rs Rs Rs ",
+      status: "Active",
+      contact: "+91 98201 54321",
+      location: "North Goa (Baga)",
+      fleet_or_inventory: "42 Deluxe Rooms"
+    },
+    {
+      id: 2,
+      name: "Goa Aqua Adventures & Water Sports",
+      category: "Activities",
+      rating: 4.9,
+      availability: "High",
+      price_range: "Rs Rs ",
+      status: "Active",
+      contact: "+91 98333 77889",
+      location: "Calangute Watersports Jetty",
+      fleet_or_inventory: "14 Jet Skis, 6 Speedboats"
+    },
+    {
+      id: 3,
+      name: "Royal Konkan Express Coach Fleet",
+      category: "Transport",
+      rating: 4.7,
+      availability: "Operational",
+      price_range: "Rs Rs ",
+      status: "Active",
+      contact: "+91 98111 44556",
+      location: "Mumbai - Goa Highway",
+      fleet_or_inventory: "12 Volvo Multi-Axle Coaches"
+    },
+    {
+      id: 4,
+      name: "Spice Coast Heritage Guides",
+      category: "Guides",
+      rating: 4.9,
+      availability: "High",
+      price_range: "Rs ",
+      status: "Active",
+      contact: "+91 98444 66778",
+      location: "Panjim Latin Quarter",
+      fleet_or_inventory: "8 Certified Multilingual Guides"
+    }
+  ];
+
+  return `
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div class="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
+            Supply Chain & Operator Network
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+            Vendor Directory & Inventory
+          </h1>
+        </div>
+        <button class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow transition flex items-center space-x-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Add New Vendor</span>
+        </button>
+      </div>
+
+      <!-- VENDORS GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${vendors.map(v => `
+          <div class="surface-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-md space-y-4 hover:border-teal-500 transition">
+            
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${v.category === 'Hotels' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' : (v.category === 'Transport' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300')}">
+                  ${v.category}
+                </span>
+                <h3 class="font-extrabold text-base text-slate-900 dark:text-white mt-1.5">
+                  ${v.name}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${v.location}</p>
+              </div>
+              <div class="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold">
+                <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-500 text-amber-500"></i>
+                <span>${v.rating}</span>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Inventory Status:</span>
+                <span class="font-bold text-emerald-500">${v.availability}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Fleet / Rooms:</span>
+                <span class="font-medium text-slate-700 dark:text-slate-300">${v.fleet_or_inventory}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Direct Contact:</span>
+                <span class="font-mono text-slate-700 dark:text-slate-300">${v.contact}</span>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold badge-active">${v.status}</span>
+              <button class="text-teal-600 dark:text-teal-400 font-semibold hover:underline">
+                Manage Contracts &rarr;
+              </button>
+            </div>
+
+          </div>
+        `).join('')}
+      </div>
+
+    </div>
+  `;
+}
